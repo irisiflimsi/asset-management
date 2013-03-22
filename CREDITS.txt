@@ -1,0 +1,13 @@
+RPTools Asset Managment 
+Copyright 2005 - 2013 RPTools contributors.
+http://rptools.net
+
+------------------------------------------------------------
+
+RPTools Asset Management project makes use or includes the libraries listed below.
+
+Apache Commons
+------------------------------
+Apache Commons Codec
+Webstie:    http://commons.apache.org/proper/commons-codec/
+Licesnse:   Apache License v2 (http://www.apache.org/licenses/LICENSE-2.0)  
