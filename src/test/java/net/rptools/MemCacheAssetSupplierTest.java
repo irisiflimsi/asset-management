@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package net.rptools;
 
 import static org.easymock.EasyMock.*;
@@ -11,6 +25,7 @@ import net.rptools.asset.supplier.MemCacheAssetSupplier;
 
 import org.junit.Before;
 import org.junit.Test;
+import static org.hamcrest.Matchers.*;
 
 public class MemCacheAssetSupplierTest {
 
@@ -23,45 +38,54 @@ public class MemCacheAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertTrue(testObject.canCache(Double.class));
-        assertTrue(testObject.canCache(BufferedImage.class));
-        assertFalse(testObject.canCreate(BufferedImage.class));
-        assertNotSame(MemCacheAssetSupplier.DEFAULT_PRIORITY, testObject.getPrio());
+        assertThat(testObject.canCache(Double.class), is(true));
+        assertThat(testObject.canCache(BufferedImage.class), is(true));
+        assertThat(testObject.canCreate(BufferedImage.class), is(false));
+        assertThat(MemCacheAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
+    }
+    
+    @Test(expected=UnsupportedOperationException.class)
+    public void testCreateFails() {
+        testObject.create("123", null, false);
     }
     
     @Test
-    public void testCreateDelete() {
+    public void testCacheRemove() {
         BufferedImage inAsset = new BufferedImage(1, 2, BufferedImage.TYPE_BYTE_GRAY);
+        String TESTID = "test asset";
         // create
-        testObject.cache("test asset", inAsset);
-        assertTrue(testObject.has("test asset"));
-        BufferedImage outAsset = testObject.get("test asset", BufferedImage.class, null);
+        testObject.cache(TESTID, inAsset);
+        assertThat(testObject.has(TESTID), is(true));
+        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
         // verify
-        assertEquals(outAsset.getWidth(), inAsset.getWidth());
-        assertEquals(outAsset.getHeight(), inAsset.getHeight());
-        // delete
-        assertTrue(testObject.remove("test asset"));
+        assertThat(outAsset.getWidth(), equalTo(inAsset.getWidth()));
+        assertThat(outAsset.getHeight(), equalTo(inAsset.getHeight()));
+        // remove
+        assertThat(testObject.canRemove(TESTID), is(true));
+        assertThat(testObject.remove(TESTID), is(true));
         // verify some more
-        assertNull(testObject.get("test asset", BufferedImage.class, null));
-        assertFalse(testObject.remove("test asset"));
+        assertThat(testObject.get(TESTID, BufferedImage.class, null), is(nullValue()));
+        assertThat(testObject.remove(TESTID), is(false));
     }
 
     @Test
-    public void testCreateGetAsyncDelete() {
+    public void testCreateGetAsyncRemove() {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
+        String TESTID = "test asset";
         // create
-        testObject.cache("test asset", inAsset);
+        testObject.cache(TESTID, inAsset);
         @SuppressWarnings("unchecked")
         AssetListener<BufferedImage> listener = createMock("Listener", AssetListener.class);
-        listener.notify(eq("test asset"), eq(inAsset));
+        listener.notify(eq(TESTID), eq(inAsset));
         replay(listener);
 
-        BufferedImage outAsset = testObject.get("test asset", BufferedImage.class, null);
+        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
         // verify
-        assertEquals(outAsset.getWidth(), inAsset.getWidth());
-        assertEquals(outAsset.getHeight(), inAsset.getHeight());
+        assertThat(outAsset.getWidth(), equalTo(inAsset.getWidth()));
+        assertThat(outAsset.getHeight(), equalTo(inAsset.getHeight()));
         // delete
-        assertTrue(testObject.remove("test asset"));
-        assertNull(testObject.get("test asset", BufferedImage.class, null));
+        assertThat(testObject.canRemove(TESTID), is(true));
+        assertThat(testObject.remove(TESTID), is(true));
+        assertThat(testObject.get(TESTID, BufferedImage.class, null), is(nullValue()));
     }
 }

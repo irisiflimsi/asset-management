@@ -16,15 +16,18 @@ package net.rptools.asset;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import net.rptools.asset.supplier.DiskCacheAssetSupplier;
+import net.rptools.asset.supplier.MemCacheAssetSupplier;
+
 /**
  * This class exists in the client and in the server and is responsible for
- * providing opaque objects (assets) from different sources. Seethe individual
- * suppliers for asset sources.
+ * providing opaque objects (assets) from different sources. It evaluates
+ * registered supplier by priorities. See the individual suppliers for asset
+ * sources.
  * @author username
  */
 public final class AssetManager {
@@ -40,13 +43,14 @@ public final class AssetManager {
     /**
      * Make constructor invisible. Provide a comparator instead of decorating
      * all AssetSuppliers
+     * @param properties properties to initialize suppliers with
      * @throws Exception instantiation or property retrieval problems
      */
     private AssetManager(Properties properties) throws Exception {
         SortedSet<AssetSupplier> set = new TreeSet<AssetSupplier>(new Comparator<AssetSupplier>() {
             @Override
             public int compare(AssetSupplier high, AssetSupplier low) {
-                return high.getPrio() - low.getPrio();
+                return low.getPriority() - high.getPriority();
             }
         });
         assetSuppliers = Collections.synchronizedSortedSet(set);
@@ -55,9 +59,10 @@ public final class AssetManager {
 
     /**
      * Use singleton pattern. The asset manager class will operate multi-threaded.
+     * @param properties properties to initialize suppliers with
      * @throws Exception instantiation or property retrieval problems
      */
-    public static AssetManager getInstance(Properties properties) throws Exception {
+    public static synchronized AssetManager getInstance(Properties properties) throws Exception {
         if (assetManager == null)
             assetManager = new AssetManager(properties);
         return assetManager;
@@ -71,7 +76,7 @@ public final class AssetManager {
         if (supplier == null) return;
         // Safety
         for (AssetSupplier iSupplier : assetSuppliers) {
-            if (supplier != iSupplier && supplier.getPrio() == iSupplier.getPrio())
+            if (supplier != iSupplier && supplier.getPriority() == iSupplier.getPriority())
                 throw new RuntimeException("Two asset suppliers with the same priority!");
         }
         assetSuppliers.add(supplier);
@@ -86,45 +91,9 @@ public final class AssetManager {
         assetSuppliers.remove(supplier);
     }
 
-    /**
-     * Get an asset synchronously. Avoid this for anything but few and small
-     * assets. The returned object is null if not found.
-     * @param id identifies the asset (globally unique)
-     * @param clazz type of object that the asset must be represented as. 
-     * @return the java object representing the asset.
-     * @throws NullPointerException if id or clazz are null
-     */
-    public <T> T getAsset(String id, Class<T> clazz) {
-        return getAsset(id, clazz, null);
-    }
-
-    /** @see #getAsset(UUID id, Class clazz) */
-    private <T> T getAsset(String id, Class<T> clazz, AssetListener<T> listener) {
-        if (id == null || clazz == null)
-            throw new NullPointerException("getAsset: id or clazz are null");
-
-        Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
-
-        AssetSupplier usedSupplier = null;
-        for (AssetSupplier supplier : assetSuppliers) {
-            // Take the first one
-            if (usedSupplier == null && supplier.has(id)) {
-                updateSet.add(supplier);
-                usedSupplier = supplier;
-            }
-            // Check override
-            else if (usedSupplier != null && supplier.has(id) && supplier.wantOverride(id)) {
-                updateSet.add(supplier);
-                usedSupplier = supplier;
-            }
-        }
-        T obj = usedSupplier.get(id, clazz, listener);
-        // Now update
-        for (AssetSupplier supplier : updateSet) {
-            if (supplier != usedSupplier && supplier.canCache(clazz))
-                supplier.cache(id, obj);
-        }
-        return obj;
+    /** @see #getAsset(id, clazz, listener, cache) */
+    public <T> T getAsset(String id, Class<T> clazz, boolean cache) {
+        return getAsset(id, clazz, null, cache);
     }
 
     /**
@@ -137,46 +106,58 @@ public final class AssetManager {
      *    the asset is available. Pass a null, if not interested in success.
      * @throws NullPointerException if id or clazz are null
      */
-    public <T> void getAssetAsync(final String id, final Class<T> clazz, final AssetListener<T> listener) {
+    public <T> void getAssetAsync(final String id, final Class<T> clazz, final AssetListener<T> listener, final boolean cache) {
         if (id == null || clazz == null)
             throw new NullPointerException("getAssetAsync: id or clazz are null");
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                getAsset(id, clazz, listener);
+                getAsset(id, clazz, listener, cache);
             }
         });
     }
 
     /**
      * Create a new asset to be managed by the suppliers. Which handler will
-     * provide the asset in the future is transparent to the user. In special
-     * cases the type of an asset to be created may differ from the type of an
-     * object to be retrieved. To determine whether the creation was successful
-     * or not, a get operation must be performed. (If a null is returned, the
-     * create has also failed.
+     * provide the asset in the future is transparent to the user and governed
+     * by priority. In special cases the type of an asset to be created may
+     * differ from the type of an object to be retrieved. To determine, whether
+     * the creation was successful or not, a get operation must be performed.
+     * Since the creation process may take long, an immediate get is not a good
+     * idea. If there are no writable suppliers, an IOException is thrown.
      * @param obj to be maintained as asset
-     * @return new id
+     * @param id id to use
+     * @param cache cache the asset?
+     * @param update in case the asset already exists, update or create a new
+     * @throws IOException in case no writable supplier was found
      */
-    public <T> String createAsset(final T obj) {
+    public <T> void createAsset(final String id, final T obj, final boolean update, final boolean cache) throws IOException {
         AssetSupplier tmpPrioSupplier = null;
         // Create this in the highest repo only
         for (AssetSupplier supplier : assetSuppliers) {
-            if (supplier.canCache(obj.getClass()))
+            if (supplier.canCreate(obj.getClass())) {
                 tmpPrioSupplier = supplier;
+                break;
+            }
         }
         final AssetSupplier prioSupplier = tmpPrioSupplier;
-        if (prioSupplier == null) return null;
-        final UUID uuid = UUID.randomUUID();
+        if (prioSupplier == null) throw new IOException("No creating AssetSupplier found");
 
         // User already has the object. Let's not let him wait.
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                prioSupplier.cache(uuid.toString(), obj);
+                prioSupplier.create(id.toString(), obj, update);
+
+                Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
+                for (AssetSupplier supplier : assetSuppliers) {
+                    if (cache && supplier.canCache(obj.getClass())) {
+                        updateSet.add(supplier);
+                    }
+                }
+                updateCaches(id, updateSet, obj);
             }
         });
-        return uuid.toString();
     }
 
     /**
@@ -194,22 +175,59 @@ public final class AssetManager {
     }
 
     /**
-     * Factory-like method to provide all available suppliers through
-     * properties.
-     * @throws Exception instantiation exceptions or properties cannot be
-     *     loaded
+     * Get an asset synchronously. Avoid this for anything but local and small
+     * assets. The returned object is null if not found.
+     * @param id identifies the asset (globally unique)
+     * @param clazz type of object that the asset must be represented as.
+     * @param listener listener to inform for asynchronous retrieval, may be null
+     * @param cache cache the asset?
+     * @return the java object representing the asset.
+     * @throws NullPointerException if id or clazz are null
      */
-    private void fillSuppliers(Properties override) throws IOException, Exception {
-        Properties properties = getTotalProperties(override);
-        for (Object property : properties.keySet()) {
-            if (property.toString().endsWith(".priority")) {
-                String className = "net.rptools.asset.supplier." + property.toString().replaceFirst(".priority", "");
-                Constructor<?> ctor = Class.forName(className).getConstructors()[0];
-                AssetSupplier supplier =
-                        AssetSupplier.class.cast(ctor.newInstance(properties));
-                assetSuppliers.add(supplier);
+    private <T> T getAsset(String id, Class<T> clazz, AssetListener<T> listener, boolean cache) {
+        if (id == null || clazz == null)
+            throw new NullPointerException("getAsset: id or clazz are null");
+
+        Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
+
+        AssetSupplier usedSupplier = null;
+        for (AssetSupplier supplier : assetSuppliers) {
+            // Take the first one
+            if (usedSupplier == null && supplier.has(id)) {
+                usedSupplier = supplier;
+            }
+            // Check caching
+            if (cache && usedSupplier != supplier && supplier.canCache(clazz) && !supplier.has(id)) {
+                updateSet.add(supplier);
             }
         }
+        T obj = usedSupplier.get(id, clazz, listener);
+        updateCaches(id, updateSet, obj);
+        return obj;
+    }
+
+    /**
+     * Update caches with a new object.
+     * @param id asset id to update
+     * @param updateSet caches to update
+     * @param obj new object for the given id
+     */
+    private <T> void updateCaches(String id, Set<AssetSupplier> updateSet, T obj) {
+        // Now update
+        for (AssetSupplier supplier : updateSet) {
+            supplier.cache(id, obj);
+        }
+    }
+
+    /**
+     * Factory-like method to provide all cache suppliers through
+     * properties.
+     * @throws IOException if something fails during registering
+     */
+    private void fillSuppliers(Properties override) throws IOException {
+        Properties properties = getTotalProperties(override);
+        registerAssetSupplier(new MemCacheAssetSupplier(properties));
+        registerAssetSupplier(new DiskCacheAssetSupplier(properties));
     }
 
     /**

@@ -20,29 +20,36 @@ import java.util.Properties;
 import net.rptools.asset.AssetSupplier;
 
 /**
- * This class provides some defaults for asset suppliers.
+ * This class provides defaults for asset suppliers.
  * @author username
  */
 public abstract class AbstractAssetSupplier implements AssetSupplier {
     /** Default priority - shall not be used */
-    public static int DEFAULT_PRIORITY = 100;
+    public static final int DEFAULT_PRIORITY = 0;
 
     /** priority (configurable in leaf classes!) */
-    protected int prio = DEFAULT_PRIORITY;
+    protected int priority = DEFAULT_PRIORITY;
+
+    /** local file separator constant */
+    protected final static String SEP = System.getProperty("file.separator");
 
     /** Properties */
     protected Properties properties = new Properties();
 
-    /** C'tor stub */
+    /** Constructtor stub */
     protected AbstractAssetSupplier(Properties override) throws IOException {
         properties = override;
     }
 
     @Override
-    public int getPrio() {
-        return prio; // see package-info of parent package
+    public int getPriority() {
+        return priority; // see package-info of parent package
     }
 
+    @Override
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
     @Override
     public boolean canCache(Class<?> clazz) {
         return false;
@@ -59,7 +66,7 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
     }
 
     @Override
-    public <T> String create(String idHint, T obj) {
+    public <T> String create(String id, T obj, boolean update) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 
@@ -71,14 +78,6 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
     @Override
     public boolean remove(String id) {
         // We do not throw an exception; the result code is sufficient
-        return false;
-    }
-
-    @Override
-    public boolean wantOverride(String id) {
-        // TODO: this means that if an entry is cached, it will be taken.
-        // Maybe this should have some background task to evaluate changes.
-        // Clearing the cache (and restart) will initiate a reload.
         return false;
     }
 }

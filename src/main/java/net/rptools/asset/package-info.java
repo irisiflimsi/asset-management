@@ -1,48 +1,50 @@
 /**
 <p>
-This package (and its sub-package) provides access to assets for rptools. The assets are considered
-opaque items, such as images or sounds usually handled by the OS at a specific time and place.
-Certain asstes (such as vision-blocking images) may be processed internally. Asset objects inside
-this process are considered immutable.
+This package (and its sub-package) provides access to assets. Assets are opaque objects that are
+referenced from "primary" objects such as campaigns, maps, and tokens. RP tools are structured such
+that primaries contain the assets they need, allowing for self-contained primaries. Asset retrieval
+thus has several aspects: (*) efficient retrieval, because primaries may only become available over
+a slow connection. The contained assets might be retrieved faster from another source. (*) identity
+management. Since an asset may be available from several sources, an "equivalence relation" must be
+established among them. (*) Updating assets. The original source of an asset included in a primary
+may change and the dependent should reflect that.
 </p>
 <p>
-The problem to be solved is efficient retrieval of these assets. Network connections may be slow or
-instable. Assets may change or be updated. Effectively, assets must have an "equivalence relation"
-across location and time. This is achieved by identifying each asset with an id. The cuurent
-suppliers of assets use ids that are URLs they can handle. Using URLs has the benefit of making
-access simple, making ids externally useful, and no references that map ids to locations need to be
-kept.
+The first point is solved by providing two caches, one in memory and one in disk. Some assets may
+be volatile or retrieved fast enough without caches, so methods are provided that by-pass caches.
+Additionally, multiple suppliers may be attached to make use of priority handling.
 </p>
 <p>
-There are various asset handlers (see below) that can write, read and cache assets. The manager
-implements a simple algorithm to shift often used assets into caches. Requests for assets may be
-synchrounous or asynchronous. Long running requests, such as network requests should be handled
-asynchronously. In this case a listener is registered that is informed about progress of asset
-retrieval.
+The second is handled by each individual supplier to identify assets it provides. The equivalence
+across suppliers is a consequence of this. Handling for non-cache suppliers is suggested as a index
+set mapping specific ids to a (generalized) URIs.
 </p>
+<p>
+The third point is realized through API calls. While it is possible to have a timestamp or similar
+construction in the index files to facilitate an update procedure, this is currently not
+implemented. An update must be triggered by the user.
+</p>
+<p>
+There are asset handlers (see below) that can write, read, and cache assets. Requests for assets
+may be synchrounous or asynchronous. Long running requests, such as network requests should be
+handled asynchronously. In this case a listener is registered that is informed about progress of
+asset retrieval. Since requestors of assets are often oblivious as to the source that is used,
+generally asynchronous retrieval is suggested.
+</p>
+<p>
 <ul>
-<li>Memory cache: java heap; subject to memory management of java. Prio 10.</li>
-<li>Disk cache: asset cache in a dedicated place on a local disk. Prio 20.</li>
-<li>Files: local file access, but may be mounted via network. Prio 30.</li>
-<li>Zip files: archive extension of the above. Prio 40.</li>
-<li>HTTP: Web based storages. Prio 50./li>
-<li>Zip HTTP: archive extension of the above. Prio 60.</li>
-<li>Server: a server process will provide assets. Prio 70.</li>
+<li>Memory cache: java heap; subject to memory management of java. Prio 100.</li>
+<li>Disk cache: asset cache in a dedicated place on a local disk. Prio 50.</li>
+<li>Files: local file access, but may be mounted via network. Prio to be supplied.</li>
+<li>Zip files: extension of the above. Prio to be supplied.</li>
+<li>HTTP: Web based storages. Prio to be supplied./li>
+<li>Zip HTTP: archive extension of the above. Prio to be supplied. (TODO: Not implemented yet.)</li>
+<li>Server: a server process will provide assets. Prio to be supplied. (TODO: Not implemented yet.)</li>
 </ul>
-<p>
-The algorithm is simple to allow efficient caching and yet be customizable. Each supplier provides
-a configurable priority. The highest priority that overrides (usually only if an update occurred
-at the orginal location) will provide the asset. All suppliers that have cache capabilities with
-lower priority will be asked to cache the asset. If at a later time this algorithm is deemed
-inadequate it can be changed. Hopefully, the interface is sufficient for this. (E.g. consider not
-caching files in the DiskCacheAssetSuplier.)
-</p>
-<p>
-If an asset supplier should not cache its entries, give it a lower priority than the cache
-handlers. Any handler can be removed by not setting its priority.
 </p>
 */
 // TODO:
+// * Refactor for Interface and redundant implementation.
 // * A nice "convenience" method that would take a WriteableAssetSupplier and a collection of asset id and go off in
 //   its own thread running through that list of assets fetching them and writing them to the WriteableAssetSupplier,
 //   this way the AssetManager can be used to easily create transportable asset "packs" that can be put on webserves,

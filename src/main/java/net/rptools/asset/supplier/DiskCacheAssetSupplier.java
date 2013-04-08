@@ -3,8 +3,9 @@ package net.rptools.asset.supplier;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLConnection;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
@@ -21,62 +22,53 @@ import net.rptools.asset.AssetListener;
  */
 public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
     /** Logging */
-    protected static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
 
-    /** assect cache absolute path */
-    protected String cacheDir;
+    /** Cache path */
+    private String fileAssetPath;
 
-    /** Cached file name prefix */
-    private final static String CACHED = "Cached-";
-
-    /** local file separator constant */
-    private final static String SEP = System.getProperty("file.separator");
-
+    /** Notify partial interval */
+    private long notifyInterval = 500; // millis
+    
     /**
-     * C'tor. Loads properties.
+     * Constructor. Loads properties.
      * @param override properties to take precendence over default ones
      * @throws IOException can't load properties
      */
     public DiskCacheAssetSupplier(Properties override) throws IOException {
         super(override);
-        this.prio = Integer.parseInt(properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".priority"));
-        String home = System.getProperty("user.dir");
-        String cachePath = properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".directory");
-        this.cacheDir = createPath(home, cachePath);
+        this.priority = Integer.parseInt(properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".priority"));
+        String cacheLocalPath = properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".directory");
+        createPath(cacheLocalPath);
     }
 
     @Override
-    public boolean has(String id) {
-        File testFile = getAssetFile(id);
-        return (testFile != null && testFile.exists());
-    }
-
-    @Override
-    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener) {
-        File testFile = getAssetFile(id);
-        BufferedImage result = null;
-        try {
-            if (testFile != null)
-                result = ImageIO.read(testFile);
-            if (listener != null)
-                listener.notify(id, clazz.cast(result));
-            return clazz.cast(result);
-        }
-        catch (Exception e) {
-            LOGGER.error("Can't get Asset", e);
-        }
-        return null;
-    }
-
-    @Override
-    public boolean canCache(Class<?> clazz) {
-        if (clazz.equals(BufferedImage.class))
-            return true;
+    public boolean canCreate(Class<?> clazz) {
         return false;
     }
 
     @Override
-    public <T> void cache(String id, T obj) {
+    public <T> String create(String id, T obj, boolean update) {
+        throw new UnsupportedOperationException("DiskCacheAssetSupplier.create");
+    }
+
+    @Override
+    public boolean canRemove(String id) {
+        return false;
+    }
+
+    @Override
+    public boolean remove(String id) {
+        return false;
+    }
+
+    @Override
+    public boolean canCache(Class<?> clazz) {
+        return clazz.equals(BufferedImage.class);
+    }
+
+    @Override
+    public synchronized <T> void cache(String id, T obj) {
         File testFile = getAssetFile(id);
         if (testFile == null) {
             LOGGER.info("Cannot cache asset " + id);
@@ -93,61 +85,129 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public boolean canRemove(String id) {
+    public boolean has(String id) {
         File testFile = getAssetFile(id);
         return (testFile != null && testFile.exists());
     }
 
-    @Override
-    public boolean remove(String id) {
-        File testFile = getAssetFile(id);
-        try {
-            if (testFile != null && testFile.exists()) {
-                testFile.delete();
-                return true;
-            }
-        }
-        catch (Exception e) {
-            LOGGER.error("Cannot delete in asset cache", e);
-        }
-        return false;
-    }
-
-    @Override
-    public boolean wantOverride(String id) {
-        // Caches never override
-        return false;
+    /** Get URL from asset id */
+    private String getKnownAsset(String id) {
+        return "file://" + fileAssetPath + id;
     }
 
     /**
-     * Digest helper. May be overloaded to provide better hashes. Must return
-     * valid filenames.
-     * @param id id to hash
-     * @return hashed id that can serve as a file name
-     * @throws NoSuchAlgorithmException system exception, really
-     * @throws UnsupportedEncodingException system exception, really
-     */
-    protected String hash(String id) throws NoSuchAlgorithmException, UnsupportedEncodingException {
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        byte[] digest = md.digest(id.getBytes("UTF-8"));
-        return new String(digest); // MD5 is always ASCII, encoding implicit
-    }
-
-    /**
-     * Helper to get the asset file. This is a two step approach. We check,
-     * whether the id already is a cache-generated id. If not, the id is hashed
-     * to produce a unique filename.
-     * @param id id to look for
-     * @return file (may not exist)
+     * Resolve reference for reading.
+     * @param id asset to resolve
+     * @return resolved asset
      */
     private File getAssetFile(String id) {
         try {
-            String hash = hash(id);
-            return new File(cacheDir + SEP + CACHED + hash);
+            String name = getKnownAsset(id);
+            LOGGER.info("reading " + id + " as " + name);
+            return new File(new URI(name));
         }
         catch (Exception e) {
-            LOGGER.error("Cache conversion problem", e);
+            LOGGER.error("Get failed for " + id, e);
             return null;
+        }
+    }
+
+    @Override
+    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener) {
+        BufferedImage result = null;
+        try {
+            URI uri = new URI(getKnownAsset(id));
+            // Only support buffered images
+            if (BufferedImage.class.equals(clazz)) {
+                LOGGER.info("Start loading " + id);
+                result = loadImage(id, uri, (AssetListener<?>) listener);
+                LOGGER.info("Finished loading " + id);
+            }
+        }
+        catch (URISyntaxException e) {
+            LOGGER.error(id + " is not an URL", e);
+        }
+        catch (IOException e) {
+            LOGGER.error(id + " cannot be correctly read", e);
+        }
+
+        if (listener != null) {
+            listener.notify(id, clazz.cast(result));
+        }
+        return clazz.cast(result);
+    }
+
+    /**
+     * Read the image, informing the listener once in a while.
+     * @param url url to get
+     * @param listener listener to inform
+     * @return prepared image
+     * @throws IOException in case any any problems occur
+     */
+    private BufferedImage loadImage(String id, URI uri, AssetListener<?> listener) throws IOException {
+        URLConnection connection = uri.toURL().openConnection();
+        int assetLength = connection.getContentLength();
+        InputStream input = new Interceptor(id, assetLength, connection.getInputStream(), listener);
+        return ImageIO.read(input);
+    }
+
+    /**
+     * Interceptor to inform users of progress.
+     * @author username
+     */
+    private class Interceptor extends InputStream {
+        private InputStream inputStream;
+        private long remainder;
+        private volatile boolean done;
+        private Interceptor(final String id, final long assetLength, InputStream inputStream, final AssetListener<?> listener) {
+            this.remainder = assetLength;
+            this.inputStream = inputStream;
+            this.done = false;
+
+            Thread supervisor = new Thread() {
+                @Override
+                public void run() {
+                    while (!done) {
+                        try {
+                            LOGGER.info("notifyInterval: " + notifyInterval);
+                            sleep(notifyInterval);
+                            LOGGER.info("Notifying " + remainder + "/" + assetLength);
+                            double ratio = 0;
+                            if (assetLength >= remainder) {
+                                ratio = Math.max(assetLength - remainder, 0)/(double)assetLength;
+                            }
+                            else {
+                                ratio = (assetLength - remainder)/(double)(assetLength - remainder - 1); // white (?) lie
+                            }
+                            listener.notifyPartial(id, ratio);
+                        }
+                        catch (Exception e) {
+                            // Any exception stops this
+                            LOGGER.error("Abort loading asset " + id, e);
+                            done = true;
+                        }
+                    }
+                }
+            };
+            if (listener != null)
+                supervisor.start();
+        }
+
+        @Override
+        public int read() throws IOException {
+            // Only extremely fast operations allowed here
+            remainder--;
+            int result = inputStream.read();
+            // stop threads;
+            if (result == -1) done = true;
+            if (done) return -1;
+            return result;
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (inputStream != null)
+                inputStream.close();
         }
     }
 
@@ -158,13 +218,17 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
      * @return directory
      * @throws SecurityException if the path cannot be created
      */
-    private String createPath(String home, String cachePath) {
-        cachePath = cachePath.replaceAll("/", SEP);
-        File completedPath = new File(home + SEP + cachePath);
+    private void createPath(String cacheLocalPath) throws IOException {
+        final String SEP = System.getProperty("file.separator");
+        String home = System.getProperty("user.dir");
+        fileAssetPath = home + SEP + cacheLocalPath.replaceAll("/", SEP);
+        if (!fileAssetPath.endsWith(SEP))
+            fileAssetPath += SEP;
+
+        File completedPath = new File(fileAssetPath);
         if (!completedPath.exists()) {
             if (!completedPath.mkdirs())
-                throw new RuntimeException("Cannot create " + completedPath.getAbsolutePath());
+                throw new IOException("Cannot create " + completedPath.getAbsolutePath());
         }
-        return completedPath.getAbsolutePath();
     }
 }

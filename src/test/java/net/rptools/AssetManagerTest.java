@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package net.rptools;
 
 import java.util.UUID;
@@ -7,6 +21,7 @@ import static org.junit.Assert.*;
 
 import org.easymock.IAnswer;
 import org.junit.*;
+import static org.hamcrest.Matchers.*;
 
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetManager;
@@ -23,8 +38,8 @@ public class AssetManagerTest {
         testObject = AssetManager.getInstance(null);
         mock1 = createMock("Mock1", AssetSupplier.class);
         mock2 = createMock("Mock2", AssetSupplier.class);
-        expect(mock1.getPrio()).andReturn(1).anyTimes();
-        expect(mock2.getPrio()).andReturn(2).anyTimes();
+        expect(mock1.getPriority()).andReturn(1).anyTimes();
+        expect(mock2.getPriority()).andReturn(2).anyTimes();
     }
     
     @After
@@ -35,7 +50,7 @@ public class AssetManagerTest {
 
     @Test
     public void testRegisterDeregister() {
-        assertNotNull(testObject);
+        assertThat(testObject, is(not(nullValue())));
         replay(mock1, mock2);
         
         testObject.registerAssetSupplier(null); //
@@ -54,20 +69,20 @@ public class AssetManagerTest {
 
     @Test
     public void testRegisterTwice() {
-        assertNotNull(testObject);
+        assertThat(testObject, is(not(nullValue())));
         replay(mock1, mock2);
 
         testObject.registerAssetSupplier(mock1); // mock1
 
         AssetSupplier mock1a = createMock("Mock1a", AssetSupplier.class);
-        expect(mock1a.getPrio()).andReturn(1).anyTimes();
+        expect(mock1a.getPriority()).andReturn(1).anyTimes();
         replay(mock1a);
 
         try {
             testObject.registerAssetSupplier(mock1a); // Error
         }
         catch (RuntimeException e) {
-            assertTrue(e.getMessage().toString().length() > 0);
+            assertThat(e.getMessage().toString().length(), is(greaterThan(0)));
         }
 
         verify(mock1, mock1a, mock2);
@@ -75,61 +90,42 @@ public class AssetManagerTest {
     
     @Test
     public void testGetAsset() {
-        assertNotNull(testObject);
+        assertThat(testObject, is(not(nullValue())));
 
         String id = UUID.randomUUID().toString();
         expect(mock1.has(id)).andReturn(true).anyTimes();
         expect(mock1.get(id, Double.class, null)).andReturn(Math.PI).anyTimes();
         expect(mock2.has(id)).andReturn(false).anyTimes();
+        expect(mock2.canCache(Double.class)).andReturn(false).anyTimes();
         replay(mock1, mock2);
 
-        testObject.registerAssetSupplier(mock1); // mock1
-        testObject.registerAssetSupplier(mock2); // mock2
+        testObject.registerAssetSupplier(mock1);
+        testObject.registerAssetSupplier(mock2);
 
-        assertEquals(testObject.getAsset(id, Double.class), (Double) Math.PI);
+        assertThat(testObject.getAsset(id, Double.class, true), is((Double) Math.PI));
         verify(mock1, mock2);
     }
 
     @Test
     public void testGetAssetTwoHaveIt() {
-        assertNotNull(testObject);
+        assertThat(testObject, is(not(nullValue())));
 
         String id = UUID.randomUUID().toString();
-        expect(mock1.has(id)).andReturn(true);
-        expect(mock1.get(id, Double.class, null)).andReturn(Math.PI);
-        expect(mock2.has(id)).andReturn(true);
-        expect(mock2.wantOverride(id)).andReturn(false);
-        replay(mock1, mock2);
-
-        testObject.registerAssetSupplier(mock1); // mock1
-        testObject.registerAssetSupplier(mock2); // mock2
-
-        assertEquals(testObject.getAsset(id, Double.class), (Double) Math.PI);
-        verify(mock1, mock2);
-    }
-
-    @Test
-    public void testGetAssetTwoHaveItOverride() {
-        assertNotNull(testObject);
-
-        String id = UUID.randomUUID().toString();
-        expect(mock1.has(id)).andReturn(true);
-        expect(mock1.get(id, Double.class, null)).andReturn(-Math.PI);
-        expect(mock1.canCache(Double.class)).andReturn(false);
-        expect(mock2.has(id)).andReturn(true);
-        expect(mock2.wantOverride(id)).andReturn(true);
         expect(mock2.get(id, Double.class, null)).andReturn(Math.PI);
+        expect(mock2.has(id)).andReturn(true);
         replay(mock1, mock2);
 
-        testObject.registerAssetSupplier(mock1); // mock1
-        testObject.registerAssetSupplier(mock2); // mock2
-        assertEquals(testObject.getAsset(id, Double.class), (Double) Math.PI);
+        testObject.registerAssetSupplier(mock1);
+        testObject.registerAssetSupplier(mock2);
+
+        assertThat(testObject.getAsset(id, Double.class, false), is((Double) Math.PI));
+        verify(mock1, mock2);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testGetAssetAsync() {
-        assertNotNull(testObject);
+        assertThat(testObject, is(not(nullValue())));
 
         final String id = UUID.randomUUID().toString();
         final AssetListener<Double> mockListener = createMock("Listener", AssetListener.class);
@@ -147,7 +143,7 @@ public class AssetManagerTest {
 
         testObject.registerAssetSupplier(mock1); // mock1
 
-        testObject.getAssetAsync(id, Double.class, mockListener);
+        testObject.getAssetAsync(id, Double.class, mockListener, true);
         try { Thread.sleep(200); } catch (InterruptedException e) { } // Fake
         verify(mock1, mock2, mockListener);
     }
