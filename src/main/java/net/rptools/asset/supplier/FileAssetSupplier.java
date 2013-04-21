@@ -16,15 +16,14 @@ package net.rptools.asset.supplier;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLConnection;
+import java.net.*;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 
 import org.slf4j.Logger;
@@ -41,7 +40,7 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
 
     /** Notify partial interval */
     private long notifyInterval = 500; // millis
-    
+
     /** Index of ids/files to locate in this supplier */
     private final Properties knownAssets = new Properties();
 
@@ -64,15 +63,6 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
         loadIndex(prefix);
     }
 
-    /**
-     * Constructor for derived classes. Loads properties.
-     * @param override properties to take precendence over default ones
-     * @throws IOException can't load properties
-     */
-    protected FileAssetSupplier(Properties override) throws IOException {
-        super(override);
-    }
-
     @Override
     public boolean has(String id) {
         if (id == null) return false;
@@ -85,9 +75,9 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
     }
 
     @Override
-    public synchronized <T> String create(String name, T obj, boolean update) {
+    public synchronized String create(String name, Asset obj, boolean update) {
         try {
-            BufferedImage img = BufferedImage.class.cast(obj);
+            BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String id = UUID.randomUUID().toString();
             // Set up name, if nothing useful is passed
             if (name == null || name.length() == 0)
@@ -102,7 +92,7 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
                 }
             }
             File f = setAssetFile(id, name);
-            ImageIO.write(img, "png", f);
+            ImageIO.write(img, obj.getFormat(), f);
             return id;
         }
         catch (Exception e) {
@@ -253,28 +243,24 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
     }
 
     @Override
-    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener) {
-        BufferedImage result = null;
+    public Asset get(String id, AssetListener listener) {
+        Asset result = null;
         try {
             URI uri = new URI(getKnownAsset(id));
-            // Only support buffered images
-            if (BufferedImage.class.equals(clazz)) {
-                LOGGER.info("Start loading " + id);
-                result = loadImage(id, uri, (AssetListener<?>) listener);
-                LOGGER.info("Finished loading " + id);
-            }
+            LOGGER.info("Start loading " + id);
+            result = loadImage(id, uri, listener);
+            LOGGER.info("Finished loading " + id);
         }
         catch (URISyntaxException e) {
             LOGGER.error(id + " is not an URL", e);
+            return null;
         }
-        catch (IOException e) {
-            LOGGER.error(id + " cannot be correctly read", e);
+        finally {
+            if (listener != null) {
+                listener.notify(id, result);
+            }
         }
-
-        if (listener != null) {
-            listener.notify(id, clazz.cast(result));
-        }
-        return clazz.cast(result);
+        return result;
     }
 
     /**
@@ -282,72 +268,19 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
      * @param url url to get
      * @param listener listener to inform
      * @return prepared image
-     * @throws IOException in case any any problems occur
      */
-    private BufferedImage loadImage(String id, URI uri, AssetListener<?> listener) throws IOException {
-        URLConnection connection = uri.toURL().openConnection();
-        int assetLength = connection.getContentLength();
-        InputStream input = new Interceptor(id, assetLength, connection.getInputStream(), listener);
-        return ImageIO.read(input);
-    }
-
-    /**
-     * Interceptor to inform users of progress.
-     * @author username
-     */
-    private class Interceptor extends InputStream {
-        private InputStream inputStream;
-        private long remainder;
-        private volatile boolean done;
-        private Interceptor(final String id, final long assetLength, InputStream inputStream, final AssetListener<?> listener) {
-            this.remainder = assetLength;
-            this.inputStream = inputStream;
-            this.done = false;
-
-            Thread supervisor = new Thread() {
-                @Override
-                public void run() {
-                    while (!done) {
-                        try {
-                            LOGGER.info("notifyInterval: " + notifyInterval);
-                            sleep(notifyInterval);
-                            LOGGER.info("Notifying " + remainder + "/" + assetLength);
-                            double ratio = 0;
-                            if (assetLength >= remainder) {
-                                ratio = Math.max(assetLength - remainder, 0)/(double)assetLength;
-                            }
-                            else {
-                                ratio = (assetLength - remainder)/(double)(assetLength - remainder - 1); // white (?) lie
-                            }
-                            listener.notifyPartial(id, ratio);
-                        }
-                        catch (Exception e) {
-                            // Any exception stops this
-                            LOGGER.error("Abort loading asset " + id, e);
-                            done = true;
-                        }
-                    }
-                }
-            };
-            if (listener != null)
-                supervisor.start();
+    private Asset loadImage(String id, URI uri, AssetListener listener) {
+        try {
+            URLConnection connection = uri.toURL().openConnection();
+            int assetLength = connection.getContentLength();
+            InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
+            return new Asset(ImageIO.read(input));
         }
-
-        @Override
-        public int read() throws IOException {
-            // Only extremely fast operations allowed here
-            remainder--;
-            int result = inputStream.read();
-            // stop threads;
-            if (result == -1) done = true;
-            if (done) return -1;
-            return result;
+        catch (MalformedURLException e) {
+            return null;
         }
-
-        @Override
-        public void close() throws IOException {
-            if (inputStream != null)
-                inputStream.close();
+        catch (IOException e) {
+            return new Asset(null);
         }
     }
 }

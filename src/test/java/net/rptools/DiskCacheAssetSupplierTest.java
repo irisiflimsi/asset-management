@@ -14,22 +14,21 @@
  */
 package net.rptools;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import net.rptools.asset.AssetListener;
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetManager;
 import net.rptools.asset.supplier.DiskCacheAssetSupplier;
 
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-import static org.hamcrest.Matchers.*;
 
 public class DiskCacheAssetSupplierTest {
 
@@ -49,8 +48,8 @@ public class DiskCacheAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(Double.class), is(false));
-        assertThat(testObject.canCache(BufferedImage.class), is(true));
+        assertThat(testObject.canCache(new Asset(Math.PI)), is(false));
+        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(true));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
@@ -62,28 +61,24 @@ public class DiskCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(1, 2, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test-asset";
         // create
-        testObject.cache(TESTID, inAsset);
+        testObject.cache(TESTID, new Asset(inAsset));
         assertThat(testObject.has(TESTID), is(true));
-        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
+        BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();
         // verify
         assertThat(outAsset.getWidth(), is(equalTo(inAsset.getWidth())));
         assertThat(outAsset.getHeight(), is(equalTo(inAsset.getHeight())));
     }
 
     @Test
-    public void testCreateGetAsyncDelete() {
+    public void testCacheDelete() {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test-asset";
         // create
-        testObject.cache(TESTID, inAsset);
-        @SuppressWarnings("unchecked")
-        AssetListener<BufferedImage> listener = createMock("Listener", AssetListener.class);
-        listener.notify(eq(TESTID), eq(inAsset));
-        replay(listener);
-
-        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
-        // verify
-        assertThat(outAsset.getWidth(), is(equalTo(inAsset.getWidth())));
-        assertThat(outAsset.getHeight(), is(equalTo(inAsset.getHeight())));
+        testObject.cache(TESTID, new Asset(inAsset));
+        // verify delete
+        assertThat(testObject.canRemove(TESTID), is(true));
+        assertThat(testObject.remove(TESTID), is(true));
+        // verify some more
+        assertThat(testObject.remove(TESTID), is(false));
     }
 }

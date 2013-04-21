@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetManager;
 import net.rptools.asset.supplier.FileAssetSupplier;
 import net.rptools.asset.supplier.ZipFileAssetSupplier;
@@ -59,7 +60,7 @@ public class ZipFileAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(BufferedImage.class), is(false));
+        assertThat(testObject.canCache(new Asset(new BufferedImage(1, 1, 1))), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(true));
         assertThat(FileAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
         assertThat(testObject.has("1234"), is(true));
@@ -80,7 +81,7 @@ public class ZipFileAssetSupplierTest {
     public void testCreateRemove() throws IOException {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
-        String id = testObject.create(TEST_IMAGE, img, false);
+        String id = testObject.create(TEST_IMAGE, new Asset(img), false);
         assertThat(testObject.has("1234"), is(true));
         assertThat(testObject.has(id), is(true));
         // file check
@@ -101,13 +102,13 @@ public class ZipFileAssetSupplierTest {
     public void testUpdate() throws IOException {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
-        String id = testObject.create(TEST_IMAGE, img, true);
+        String id = testObject.create(TEST_IMAGE, new Asset(img), true);
         assertThat(testObject.has("1234"), is(true));
         assertThat(id, is(equalTo("1234")));
         // file check
         File zip = new File(TEST_ZIP_FULL);
         assertTrue(zip.exists());
         Logger.getAnonymousLogger().warning(">>> Length to check: " + zip.length());
-        assertTrue(zip.length() > 2200 && zip.length() < 2300); // 2202; be flexible (good idea?)
+        assertTrue(zip.length() > 2100 && zip.length() < 2300); // 2200; be flexible (good idea?)
     }
 }

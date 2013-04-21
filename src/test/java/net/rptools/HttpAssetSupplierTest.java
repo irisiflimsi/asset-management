@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetManager;
 import net.rptools.asset.supplier.HttpAssetSupplier;
@@ -55,10 +56,9 @@ public class HttpAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(BufferedImage.class), is(false));
+        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
-        assertThat(testObject.canCache(BufferedImage.class), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
         assertThat(testObject.has("ftp://foo.bar"), is(false));
         assertThat(HttpAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
@@ -73,7 +73,7 @@ public class HttpAssetSupplierTest {
     @Test
     // Requires "internet" access
     public void testGet() {
-        BufferedImage png = testObject.get(MY_ID, BufferedImage.class, null);
+        BufferedImage png = (BufferedImage) testObject.get(MY_ID, null).getMain();
         assertThat(png, is(notNullValue()));
         assertThat(png.getHeight() * png.getWidth(), is(greaterThan(4))); // not likely to become that small
     }
@@ -81,14 +81,13 @@ public class HttpAssetSupplierTest {
     @Test
     // Requires "internet" access
     public void testGetAsync() throws TimeoutException {
-        @SuppressWarnings("unchecked")
-        AssetListener<BufferedImage> listener = createMock("Listener", AssetListener.class);
+        AssetListener listener = createMock("Listener", AssetListener.class);
         listener.notifyPartial(eq(MY_ID), anyDouble());
         expectLastCall().anyTimes();
-        listener.notify(eq(MY_ID), anyObject(BufferedImage.class));
+        listener.notify(eq(MY_ID), anyObject(Asset.class));
         replay(listener);
 
-        BufferedImage png = testObject.get(MY_ID, BufferedImage.class, listener);
+        BufferedImage png = (BufferedImage) testObject.get(MY_ID, listener).getMain();
 
         assertThat(png, is(notNullValue()));
         assertThat(png.getHeight() * png.getWidth(), is(greaterThan(4))); // not likely to become that small
@@ -99,16 +98,15 @@ public class HttpAssetSupplierTest {
     // Requires "internet" access. This test may fail, if the the retrieval of the image
     // is particularly fast.
     public void testGetAsyncAbort() throws TimeoutException {
-        @SuppressWarnings("unchecked")
-        AssetListener<BufferedImage> listener = createMock("Listener", AssetListener.class);
+        AssetListener listener = createMock("Listener", AssetListener.class);
         listener.notifyPartial(eq(MY_ID), anyDouble());
         expectLastCall().andThrow(new TimeoutException());
-        listener.notify(eq(MY_ID), anyObject(BufferedImage.class));
+        listener.notify(eq(MY_ID), anyObject(Asset.class));
         replay(listener);
         Logger.getAnonymousLogger().warning("Exception test started");
 
-        BufferedImage png = testObject.get(MY_ID, BufferedImage.class, listener);
-        assertThat(png, is(nullValue()));
+        Asset png = testObject.get(MY_ID, listener);
+        assertThat(png == null || png.getMain() == null, is(true));
         verify(listener);
 
         Logger.getAnonymousLogger().warning("Exception test ended");

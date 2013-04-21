@@ -15,7 +15,9 @@
 package net.rptools.asset.supplier;
 
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.*;
@@ -28,10 +30,11 @@ import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 
 /**
- * Using NIO to get assets.
+ * Using NIO to get assets from ZIP files.
  * @author username
  */
 public class ZipFileAssetSupplier extends AbstractAssetSupplier {
@@ -80,15 +83,24 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
      * @return prepared image
      * @throws IOException in case any any problems occur
      */
-    private BufferedImage loadImage(String id, URI uri, AssetListener<?> listener) throws IOException {
+    private Asset loadImage(String id, URI uri, AssetListener listener) throws IOException {
         InputStream input = null;
         try {
             // This is a zip-local-URI;
             Path entry = zipFile.getPath(uri.getPath());
             InputStream stream = Files.newInputStream(entry);
             long assetLength = Files.size(entry);
-            input = new Interceptor(id, assetLength, stream, listener);
-            return ImageIO.read(input);
+            input = new InputStreamInterceptor(id, assetLength, stream, listener, notifyInterval);
+        }
+        catch (IOException e) {
+            // input == null
+            return null;
+        }
+        try {
+            return new Asset(ImageIO.read(input));
+        }
+        catch (IOException e) {
+            return new Asset(null);
         }
         finally {
             if (input != null)
@@ -105,7 +117,8 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
      */
     private void reloadZipFile() throws IOException {
         if (zipFile != null) zipFile.close();
-        zipFile = FileSystems.newFileSystem(Paths.get(zipFilePath), null);
+        Path path = Paths.get(zipFilePath);
+        zipFile = FileSystems.newFileSystem(path, null);
     }
 
     /**
@@ -126,10 +139,10 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public synchronized <T> String create(String name, T obj, boolean update) {
+    public synchronized String create(String name, Asset obj, boolean update) {
         OutputStream stream = null;
         try {
-            BufferedImage img = BufferedImage.class.cast(obj);
+            BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String id = UUID.randomUUID().toString();
             // Set up name, if nothing useful is passed
             if (name == null || name.length() == 0)
@@ -147,7 +160,7 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
             setAssetFile(id, name);
             Path entry = zipFile.getPath(name);
             stream = Files.newOutputStream(entry);
-            ImageIO.write(img, "png", stream);
+            ImageIO.write(img, obj.getFormat(), stream);
             return id;
         }
         catch (Exception e) {
@@ -250,77 +263,14 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
         return null;
     }
 
-    /**
-     * Interceptor to inform users of progress.
-     * @author username
-     */
-    private class Interceptor extends InputStream {
-        private InputStream inputStream;
-        private long remainder;
-        private volatile boolean done;
-        private Interceptor(final String id, final long assetLength, InputStream inputStream, final AssetListener<?> listener) {
-            this.remainder = assetLength;
-            this.inputStream = inputStream;
-            this.done = false;
-
-            Thread supervisor = new Thread() {
-                @Override
-                public void run() {
-                    while (!done) {
-                        try {
-                            LOGGER.info("notifyInterval: " + notifyInterval);
-                            sleep(notifyInterval);
-                            LOGGER.info("Notifying " + remainder + "/" + assetLength);
-                            double ratio = 0;
-                            if (assetLength >= remainder) {
-                                ratio = Math.max(assetLength - remainder, 0)/(double)assetLength;
-                            }
-                            else {
-                                ratio = (assetLength - remainder)/(double)(assetLength - remainder - 1); // white (?) lie
-                            }
-                            listener.notifyPartial(id, ratio);
-                        }
-                        catch (Exception e) {
-                            // Any exception stops this
-                            LOGGER.error("Abort loading asset " + id, e);
-                            done = true;
-                        }
-                    }
-                }
-            };
-            if (listener != null)
-                supervisor.start();
-        }
-
-        @Override
-        public int read() throws IOException {
-            // Only extremely fast operations allowed here
-            remainder--;
-            int result = inputStream.read();
-            // stop threads;
-            if (result == -1) done = true;
-            if (done) return -1;
-            return result;
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (inputStream != null)
-                inputStream.close();
-        }
-    }
-
     @Override
-    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener) {
-        BufferedImage result = null;
+    public Asset get(String id, AssetListener listener) {
+        Asset result = null;
         try {
             URI uri = new URI(getKnownAsset(id));
-            // Only support buffered images
-            if (BufferedImage.class.equals(clazz)) {
-                LOGGER.info("Start loading " + id);
-                result = loadImage(id, uri, (AssetListener<?>) listener);
-                LOGGER.info("Finished loading " + id);
-            }
+            LOGGER.info("Start loading " + id);
+            result = loadImage(id, uri, listener);
+            LOGGER.info("Finished loading " + id);
         }
         catch (URISyntaxException e) {
             LOGGER.error(id + " is not an URL", e);
@@ -330,8 +280,8 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
         }
 
         if (listener != null) {
-            listener.notify(id, clazz.cast(result));
+            listener.notify(id, result);
         }
-        return clazz.cast(result);
+        return result;
     }
 }

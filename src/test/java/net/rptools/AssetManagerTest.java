@@ -14,18 +14,19 @@
  */
 package net.rptools;
 
+import static org.easymock.EasyMock.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
+
+import java.io.IOException;
 import java.util.UUID;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import net.rptools.asset.*;
 
 import org.easymock.IAnswer;
-import org.junit.*;
-import static org.hamcrest.Matchers.*;
-
-import net.rptools.asset.AssetListener;
-import net.rptools.asset.AssetManager;
-import net.rptools.asset.AssetSupplier;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class AssetManagerTest {
 
@@ -94,15 +95,15 @@ public class AssetManagerTest {
 
         String id = UUID.randomUUID().toString();
         expect(mock1.has(id)).andReturn(true).anyTimes();
-        expect(mock1.get(id, Double.class, null)).andReturn(Math.PI).anyTimes();
+        expect(mock1.get(id, null)).andReturn(new Asset(Math.PI)).anyTimes();
         expect(mock2.has(id)).andReturn(false).anyTimes();
-        expect(mock2.canCache(Double.class)).andReturn(false).anyTimes();
+        expect(mock2.canCache(anyObject(Asset.class))).andReturn(false).anyTimes();
         replay(mock1, mock2);
 
         testObject.registerAssetSupplier(mock1);
         testObject.registerAssetSupplier(mock2);
 
-        assertThat(testObject.getAsset(id, Double.class, true), is((Double) Math.PI));
+        assertThat((Double)testObject.getAsset(id, true).getMain(), is((Double) Math.PI));
         verify(mock1, mock2);
     }
 
@@ -111,40 +112,39 @@ public class AssetManagerTest {
         assertThat(testObject, is(not(nullValue())));
 
         String id = UUID.randomUUID().toString();
-        expect(mock2.get(id, Double.class, null)).andReturn(Math.PI);
+        expect(mock2.get(id, null)).andReturn(new Asset(Math.PI));
         expect(mock2.has(id)).andReturn(true);
         replay(mock1, mock2);
 
         testObject.registerAssetSupplier(mock1);
         testObject.registerAssetSupplier(mock2);
 
-        assertThat(testObject.getAsset(id, Double.class, false), is((Double) Math.PI));
+        assertThat((Double)testObject.getAsset(id, false).getMain(), is((Double) Math.PI));
         verify(mock1, mock2);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    public void testGetAssetAsync() {
+    public void testGetAssetAsync() throws InterruptedException {
         assertThat(testObject, is(not(nullValue())));
 
         final String id = UUID.randomUUID().toString();
-        final AssetListener<Double> mockListener = createMock("Listener", AssetListener.class);
+        final AssetListener mockListener = createMock("Listener", AssetListener.class);
         expect(mock1.has(id)).andReturn(true);
-        IAnswer<Double> answer = new IAnswer<Double>() {
+        IAnswer<Asset> answer = new IAnswer<Asset>() {
             @Override
-            public Double answer() throws Throwable {
-                mockListener.notify(id, Math.PI);
-                return Math.PI;
+            public Asset answer() throws Throwable {
+                mockListener.notify(id, new Asset(Math.PI));
+                return new Asset(Math.PI);
             }
         };
-        expect(mock1.get(id, Double.class, mockListener)).andAnswer(answer);
-        mockListener.notify(id, Math.PI);
+        expect(mock1.get(id, mockListener)).andAnswer(answer);
+        mockListener.notify(eq(id), eq(new Asset(Math.PI)));
         replay(mock1, mock2, mockListener);
 
         testObject.registerAssetSupplier(mock1); // mock1
 
-        testObject.getAssetAsync(id, Double.class, mockListener, true);
-        try { Thread.sleep(200); } catch (InterruptedException e) { } // Fake
+        testObject.getAssetAsync(id, mockListener, true);
+        Thread.sleep(200); // Fake
         verify(mock1, mock2, mockListener);
     }
 }

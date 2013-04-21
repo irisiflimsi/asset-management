@@ -23,14 +23,14 @@ import java.util.concurrent.TimeoutException;
  * speaking never complete.
  * @author username
  */
-public interface AssetListener<T> {
+public interface AssetListener {
     /**
      * Call-back method for completion. Please see the {@link #notifyPartial}
      * for semantics of <tt>obj</tt> in error cases.
      * @param id object id to inform about
      * @param obj completed object
      */
-    public void notify(String id, T obj);
+    public void notify(String id, Asset obj);
 
     /**
      * Call-back method for partial completion. This method can be called at
@@ -43,7 +43,10 @@ public interface AssetListener<T> {
      * well.
      * @param id object id to inform about.
      * @param completed completion 0..1
-     * @throws TimeoutException if the retrieval should be aborted. (Notify is not called.)
+     * @throws TimeoutException if the retrieval should be aborted. (Notify is
+     *   not called. If a synchronous wait on the asset is pending, the result
+     *   is undefined. It may be null, may contain a null object or may be
+     *   complete.)
      */
     public void notifyPartial(String id, double completed) throws TimeoutException;
 }

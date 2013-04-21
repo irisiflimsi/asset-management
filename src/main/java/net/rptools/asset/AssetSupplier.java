@@ -34,20 +34,19 @@ public interface AssetSupplier {
      * Return the asset. Assets should be preloaded, i.e. either fully
      * available or sufficiently buffered. The return value may be null.
      * @param id asset identifier
-     * @param clazz class the user wants this to be cast to
      * @param listener listener to inform on (partial) success 
      * @return correct object of the desired class or null.
-     * @throws ClassCastException due to technicalities to be avoided
      */
-    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener);
+    public Asset get(String id, AssetListener listener);
 
     /**
      * Can this supplier cache an asset of type clazz?
      * Note that in some special cases the input class may differ
      * from the output class used in #has.
+     * @param obj asset to possibly cache.
      * @return whether this supplier caches.
      */
-    public boolean canCache(Class<?> clazz);
+    public boolean canCache(Asset obj);
 
     /**
      * Cache an asset of of type T.
@@ -55,7 +54,7 @@ public interface AssetSupplier {
      * from the output class used in #get. This call is also used
      * for updates ("upsert").
      */
-    public <T> void cache(String id, T obj);
+    public void cache(String id, Asset obj);
 
     /**
      * Can this supplier create an asset of type clazz?
@@ -79,7 +78,7 @@ public interface AssetSupplier {
      * @return new asset id or null, if creation failed.
      * @throws RuntimeException when name is null or empty
      */
-    public <T> String create(String name, T obj, boolean update);
+    public String create(String name, Asset obj, boolean update);
 
     /** Can this supplier remove the asset with given id? */
     public boolean canRemove(String id);

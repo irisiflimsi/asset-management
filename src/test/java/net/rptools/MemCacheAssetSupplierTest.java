@@ -15,17 +15,18 @@
 package net.rptools;
 
 import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 import java.awt.image.BufferedImage;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetManager;
 import net.rptools.asset.supplier.MemCacheAssetSupplier;
 
 import org.junit.Before;
 import org.junit.Test;
-import static org.hamcrest.Matchers.*;
 
 public class MemCacheAssetSupplierTest {
 
@@ -38,8 +39,8 @@ public class MemCacheAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(Double.class), is(true));
-        assertThat(testObject.canCache(BufferedImage.class), is(true));
+        assertThat(testObject.canCache(new Asset(Math.PI)), is(true));
+        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(true));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
         assertThat(MemCacheAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
     }
@@ -54,9 +55,9 @@ public class MemCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(1, 2, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test asset";
         // create
-        testObject.cache(TESTID, inAsset);
+        testObject.cache(TESTID, new Asset(inAsset));
         assertThat(testObject.has(TESTID), is(true));
-        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
+        BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();
         // verify
         assertThat(outAsset.getWidth(), equalTo(inAsset.getWidth()));
         assertThat(outAsset.getHeight(), equalTo(inAsset.getHeight()));
@@ -64,7 +65,7 @@ public class MemCacheAssetSupplierTest {
         assertThat(testObject.canRemove(TESTID), is(true));
         assertThat(testObject.remove(TESTID), is(true));
         // verify some more
-        assertThat(testObject.get(TESTID, BufferedImage.class, null), is(nullValue()));
+        assertThat(testObject.get(TESTID, null), is(nullValue()));
         assertThat(testObject.remove(TESTID), is(false));
     }
 
@@ -73,19 +74,18 @@ public class MemCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test asset";
         // create
-        testObject.cache(TESTID, inAsset);
-        @SuppressWarnings("unchecked")
-        AssetListener<BufferedImage> listener = createMock("Listener", AssetListener.class);
-        listener.notify(eq(TESTID), eq(inAsset));
+        testObject.cache(TESTID, new Asset(inAsset));
+        AssetListener listener = createMock("Listener", AssetListener.class);
+        listener.notify(eq(TESTID), eq(new Asset(inAsset)));
         replay(listener);
 
-        BufferedImage outAsset = testObject.get(TESTID, BufferedImage.class, null);
+        BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();
         // verify
         assertThat(outAsset.getWidth(), equalTo(inAsset.getWidth()));
         assertThat(outAsset.getHeight(), equalTo(inAsset.getHeight()));
         // delete
         assertThat(testObject.canRemove(TESTID), is(true));
         assertThat(testObject.remove(TESTID), is(true));
-        assertThat(testObject.get(TESTID, BufferedImage.class, null), is(nullValue()));
+        assertThat(testObject.get(TESTID, null), is(nullValue()));
     }
 }

@@ -43,23 +43,5 @@ generally asynchronous retrieval is suggested.
 </ul>
 </p>
 */
-// TODO:
-// * Refactor for Interface and redundant implementation.
-// * A nice "convenience" method that would take a WriteableAssetSupplier and a collection of asset id and go off in
-//   its own thread running through that list of assets fetching them and writing them to the WriteableAssetSupplier,
-//   this way the AssetManager can be used to easily create transportable asset "packs" that can be put on webserves,
-//   drop box, google drive, sugar sync, usb stick, what ever else. The progress call back should be used to update
-//   percetange of files done or whatever.
-// * At the moment the AssetManager fetches the asset converts it to an image and returns null if it cant do this.
-//   Really there are two separate conditions, the asset can't be found and the asset can't be loaded. These can be
-//   represented differently on the map so that users know which problem they are looking for.
-// * I have been toying around with the idea of having a separate metadata file be carried around with the asset (just
-//   a small file with credits, license type (not the whole license just the name and url) and web page of creator. So
-//   when these things are loaded it can return an Asset<T> instead of the object itself which has this metadata, or
-//   even just a getAssetMetadata(...) method in AssetManager. Basically when the asset is fetched from the rptools
-//   website or some other third party repository someone has set up it grabs the asset file and if it exists the
-//   metadata file and caches them (if required), that way its possible for people to look up the credits and licenses
-//   for any images that are fetched this way. I know many of these file formats contain places to put metadata but I
-//   don't think its going to be a non messy solution to put all of this information in the file. This is certainly not
-//   a must have, but I would list it as a very nice to have.
+// TODO: Refactor for Interface and redundancy. Provide disc cache pruning.
 package net.rptools.asset;

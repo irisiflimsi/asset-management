@@ -91,9 +91,9 @@ public final class AssetManager {
         assetSuppliers.remove(supplier);
     }
 
-    /** @see #getAsset(id, clazz, listener, cache) */
-    public <T> T getAsset(String id, Class<T> clazz, boolean cache) {
-        return getAsset(id, clazz, null, cache);
+    /** @see #getAsset(id, listener, cache) */
+    public Asset getAsset(String id, boolean cache) {
+        return getAsset(id, null, cache);
     }
 
     /**
@@ -101,18 +101,17 @@ public final class AssetManager {
      * (or any other prominent thread). The returned object is null if not
      * found.
      * @param id identifies the asset (globally unique)
-     * @param clazz type of object that the asset must be represented as. 
      * @param listener the listener to inform when the java object representing
      *    the asset is available. Pass a null, if not interested in success.
-     * @throws NullPointerException if id or clazz are null
+     * @throws NullPointerException if id is null
      */
-    public <T> void getAssetAsync(final String id, final Class<T> clazz, final AssetListener<T> listener, final boolean cache) {
-        if (id == null || clazz == null)
-            throw new NullPointerException("getAssetAsync: id or clazz are null");
+    public void getAssetAsync(final String id, final AssetListener listener, final boolean cache) {
+        if (id == null)
+            throw new NullPointerException("getAssetAsync: id is null");
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                getAsset(id, clazz, listener, cache);
+                getAsset(id, listener, cache);
             }
         });
     }
@@ -126,16 +125,21 @@ public final class AssetManager {
      * Since the creation process may take long, an immediate get is not a good
      * idea. If there are no writable suppliers, an IOException is thrown.
      * @param obj to be maintained as asset
-     * @param id id to use
+     * @param name to be resolved by the supplier, null the supplier should
+     *   create one. This is a complete URI for the common handlers.
+     *   If the name exists and update is true, the asset content is updated.
+     *   If update is false, but the name exists, the new name is the id.
+     * @param listener listener to inform about the creation. This should be
+     *   non-null, because otherwise the id created will not become known!
      * @param cache cache the asset?
      * @param update in case the asset already exists, update or create a new
      * @throws IOException in case no writable supplier was found
      */
-    public <T> void createAsset(final String id, final T obj, final boolean update, final boolean cache) throws IOException {
+    public void createAsset(final String name, final Asset obj, final AssetListener listener, final boolean update, final boolean cache) throws IOException {
         AssetSupplier tmpPrioSupplier = null;
         // Create this in the highest repo only
         for (AssetSupplier supplier : assetSuppliers) {
-            if (supplier.canCreate(obj.getClass())) {
+            if (supplier.canCreate(obj.getType())) {
                 tmpPrioSupplier = supplier;
                 break;
             }
@@ -147,11 +151,13 @@ public final class AssetManager {
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                prioSupplier.create(id.toString(), obj, update);
-
+                String id = prioSupplier.create(name, obj, update);
+                if (listener != null)
+                    listener.notify(id, obj);
+                
                 Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
                 for (AssetSupplier supplier : assetSuppliers) {
-                    if (cache && supplier.canCache(obj.getClass())) {
+                    if (cache && supplier.canCache(obj)) {
                         updateSet.add(supplier);
                     }
                 }
@@ -178,15 +184,14 @@ public final class AssetManager {
      * Get an asset synchronously. Avoid this for anything but local and small
      * assets. The returned object is null if not found.
      * @param id identifies the asset (globally unique)
-     * @param clazz type of object that the asset must be represented as.
      * @param listener listener to inform for asynchronous retrieval, may be null
      * @param cache cache the asset?
      * @return the java object representing the asset.
-     * @throws NullPointerException if id or clazz are null
+     * @throws NullPointerException if id is null
      */
-    private <T> T getAsset(String id, Class<T> clazz, AssetListener<T> listener, boolean cache) {
-        if (id == null || clazz == null)
-            throw new NullPointerException("getAsset: id or clazz are null");
+    private Asset getAsset(String id, AssetListener listener, boolean cache) {
+        if (id == null)
+            throw new NullPointerException("getAsset: id is null");
 
         Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
 
@@ -197,13 +202,41 @@ public final class AssetManager {
                 usedSupplier = supplier;
             }
             // Check caching
-            if (cache && usedSupplier != supplier && supplier.canCache(clazz) && !supplier.has(id)) {
+            if (cache && usedSupplier != supplier && !supplier.has(id)) {
                 updateSet.add(supplier);
             }
         }
-        T obj = usedSupplier.get(id, clazz, listener);
+        Asset obj = usedSupplier.get(id, listener);
         updateCaches(id, updateSet, obj);
         return obj;
+    }
+
+    /**
+     * Memory problems, write access in the supplier and similar things all
+     * lead to IOExceptions. The listener is informed about each asset
+     * individually when completed. Partial completion is not notified.
+     * @param ids list of assets to copy
+     * @param update whether to overwrite in the destination supplier.
+     * @param supplier destination
+     * @param listener object to inform about partial completion
+     * @throws IOException in case the supplier cannot write (all) assets in the list
+     */
+    public void copyAssets(final String[] ids, final AssetSupplier supplier, final AssetListener listener, final boolean update) throws IOException {
+        executors.execute(new Runnable() {
+            @Override
+            public void run() {
+                // We are copying "through memory", because it is comprehensible solution, although it
+                // would (probably) be more efficient treating each type separately through NIO.
+                for (String id : ids) {
+                    Asset obj = getAsset(id, false);
+                    if (obj != null)
+                        supplier.create(null, obj, update);
+                    // We notify none-the-less
+                    if (listener != null)
+                        listener.notify(id, obj);
+                }
+            }
+        });
     }
 
     /**
@@ -212,10 +245,11 @@ public final class AssetManager {
      * @param updateSet caches to update
      * @param obj new object for the given id
      */
-    private <T> void updateCaches(String id, Set<AssetSupplier> updateSet, T obj) {
+    private void updateCaches(String id, Set<AssetSupplier> updateSet, Asset obj) {
         // Now update
         for (AssetSupplier supplier : updateSet) {
-            supplier.cache(id, obj);
+            if (supplier.canCache(obj))
+                supplier.cache(id, obj);
         }
     }
 

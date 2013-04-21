@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 
 /**
@@ -12,11 +13,11 @@ import net.rptools.asset.AssetListener;
  */
 public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     /** simple map */
-    private Map<String, WeakReference<Object>> map =
-            Collections.synchronizedMap(new HashMap<String, WeakReference<Object>>());
+    private Map<String, WeakReference<Asset>> map =
+            Collections.synchronizedMap(new HashMap<String, WeakReference<Asset>>());
 
     /** precautionary alive set */
-    private Set<Object> alive = Collections.synchronizedSet(new HashSet<Object>());
+    private Set<Asset> alive = Collections.synchronizedSet(new HashSet<Asset>());
 
     /**
      * Constructor. Priorities specific to this class.
@@ -32,8 +33,8 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     public boolean has(String id) {
         // Note that this is volatile but we need to keep the reference from
         // being gc'ed in the next second
-        final WeakReference<Object> ref = map.get(id);
-        final Object obj = (ref != null ? ref.get() : null);
+        final WeakReference<Asset> ref = map.get(id);
+        final Asset obj = (ref != null ? ref.get() : null);
 
         Thread keepAlive = new Thread() {
             @Override
@@ -55,24 +56,24 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public <T> T get(String id, Class<T> clazz, AssetListener<T> listener) {
-        WeakReference<Object> ref = map.get(id);
-        Object obj = null;
+    public Asset get(String id, AssetListener listener) {
+        WeakReference<Asset> ref = map.get(id);
+        Asset obj = null;
         if (ref != null)
             obj = ref.get();
         if (listener != null)
-            listener.notify(id, clazz.cast(obj));
-        return clazz.cast(obj);
+            listener.notify(id, obj);
+        return obj;
     }
 
     @Override
-    public boolean canCache(Class<?> clazz) {
+    public boolean canCache(Asset obj) {
         return true;
     }
 
     @Override
-    public <T> void cache(String id, T obj) {
-        WeakReference<Object> ref = new WeakReference<Object>(obj);
+    public void cache(String id, Asset obj) {
+        WeakReference<Asset> ref = new WeakReference<Asset>(obj);
         map.put(id, ref);
     }
 

@@ -14,7 +14,8 @@
  */
 package net.rptools;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -23,11 +24,11 @@ import java.net.URISyntaxException;
 
 import javax.imageio.ImageIO;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetManager;
 import net.rptools.asset.supplier.FileAssetSupplier;
 
 import org.junit.*;
-import static org.hamcrest.Matchers.*;
 
 public class FileAssetSupplierTest {
 
@@ -41,27 +42,26 @@ public class FileAssetSupplierTest {
     
     @Before
     public void setUp() throws Exception {
+        tearDown();
         String userDir = System.getProperty("user.dir") + SEP;
         example = new File(userDir + TEST_DIR + TEST_IMAGE);
-        if (!example.exists()) {
-            URI uri = new URI(HttpAssetSupplierTest.TEST_IMAGE);
-            InputStream in = uri.toURL().openConnection().getInputStream();
-            OutputStream out = new FileOutputStream(example);
-            for (int read = in.read(); read != -1; read = in.read())
-                out.write(read);
-            out.close();
-        }
+        URI uri = new URI(HttpAssetSupplierTest.TEST_IMAGE);
+        InputStream in = uri.toURL().openConnection().getInputStream();
+        OutputStream out = new FileOutputStream(example);
+        for (int read = in.read(); read != -1; read = in.read())
+            out.write(read);
+        out.close();
+
         File index = new File(userDir + TEST_DIR + "index");
-        if (!index.exists()) {
-            PrintStream output = new PrintStream(new FileOutputStream(index));
-            output.println("1234=" + TEST_IMAGE);
-            output.close();
-        }
+        PrintStream output = new PrintStream(new FileOutputStream(index));
+        output.println("1234=" + TEST_IMAGE);
+        output.close();
+
         testObject = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR);
     }
 
-    @AfterClass
-    public static void tearDown() {
+    @After
+    public void tearDown() {
         String userDir = System.getProperty("user.dir") + SEP;
         File dir = new File(userDir + TEST_DIR);
         for (File rm : dir.listFiles())
@@ -69,11 +69,10 @@ public class FileAssetSupplierTest {
     }
 
     @Test
-    public void testTrivialMethods() throws URISyntaxException {
-        assertThat(testObject.canCache(BufferedImage.class), is(false));
+    public void testTrivialMethods() throws URISyntaxException, IOException {
+        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
-        assertThat(testObject.canCache(BufferedImage.class), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(true));
         assertThat(FileAssetSupplier.DEFAULT_PRIORITY, not(equalTo(testObject.getPriority())));
         assertThat(testObject.has("1235"), is(false));
@@ -89,9 +88,9 @@ public class FileAssetSupplierTest {
     public void testCreateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
         String name = example.toURI().toString();
-        String id = testObject.create(name, asset, true);
+        String id = testObject.create(name, new Asset(asset), true);
         assertThat(id, not(equalTo("1234")));
-        BufferedImage saved = testObject.get(id, BufferedImage.class, null);
+        BufferedImage saved = (BufferedImage) testObject.get(id, null).getMain();
         assertThat(asset.getWidth(), is(equalTo(saved.getWidth())));
         assertThat(asset.getHeight(), is(equalTo(saved.getHeight())));
         assertThat(testObject.canRemove(id.substring(1)), is(false));
@@ -107,14 +106,14 @@ public class FileAssetSupplierTest {
     public void testCreateDuplicateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
         String name = example.toURI().toString();
-        String id = testObject.create(name, asset, true);
-        String id2 = testObject.create(name, asset, true);
+        String id = testObject.create(name, new Asset(asset), true);
+        String id2 = testObject.create(name, new Asset(asset), true);
         assertThat(id, is(equalTo(id2)));
-        String id3 = testObject.create(name, asset, false);
+        String id3 = testObject.create(name, new Asset(asset), false);
         assertThat(id, is(not(equalTo(id3))));
 
         // "Other" asset
-        BufferedImage saved = testObject.get(id3, BufferedImage.class, null);
+        BufferedImage saved = (BufferedImage) testObject.get(id3, null).getMain();
         assertThat(asset.getWidth(), is(equalTo(saved.getWidth())));
         assertThat(asset.getHeight(), is(equalTo(saved.getHeight())));
 
