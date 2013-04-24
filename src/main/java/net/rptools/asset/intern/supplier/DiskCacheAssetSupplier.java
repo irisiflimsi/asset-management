@@ -1,25 +1,30 @@
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.*;
 import java.net.*;
-import java.util.Properties;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.util.*;
 
 import javax.imageio.ImageIO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
+import net.rptools.asset.intern.Asset;
 
 /**
  * This class provides access to the disk cache.
  * We only provide BufferedImages currently.
  * @author username
  */
-public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
+public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     /** Logging */
     private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
 
@@ -28,7 +33,7 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
 
     /** Notify partial interval */
     private long notifyInterval = 500; // millis
-    
+
     /**
      * Constructor. Loads properties.
      * @param override properties to take precendence over default ones
@@ -69,6 +74,7 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
         return (testFile != null && testFile.exists());
     }
 
+    @Override
     public boolean canRemove(String id) {
         if (id == null) return false;
         return (getAssetFile(id) != null);
@@ -89,8 +95,8 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
         return false;
     }
 
-    /** Get URL from asset id */
-    private String getKnownAsset(String id) {
+    @Override
+    protected String getKnownAsset(String id) {
         return "file://" + fileAssetPath + id;
     }
 
@@ -112,34 +118,9 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public Asset get(String id, AssetListener listener) {
-        Asset result = null;
+    protected Asset loadImage(String id, URI uri, AssetListener listener) {
         try {
-            URI uri = new URI(getKnownAsset(id));
-            LOGGER.info("Start loading " + id);
-            result = loadImage(id, uri, listener);
-            LOGGER.info("Finished loading " + id);
-        }
-        catch (URISyntaxException e) {
-            return null;
-        }
-        finally {
-            if (listener != null)
-                listener.notify(id, result);
-        }
-        return result;
-    }
-
-    /**
-     * Read the image, informing the listener once in a while.
-     * @param url url to get
-     * @param listener listener to inform
-     * @return prepared image, null, if not found or Asset(null) if wrong format.
-     */
-    private Asset loadImage(String id, URI uri, AssetListener listener) {
-        URLConnection connection;
-        try {
-            connection = uri.toURL().openConnection();
+            URLConnection connection = uri.toURL().openConnection();
             int assetLength = connection.getContentLength();
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
             return new Asset(ImageIO.read(input));
@@ -170,6 +151,40 @@ public class DiskCacheAssetSupplier extends AbstractAssetSupplier {
         if (!completedPath.exists()) {
             if (!completedPath.mkdirs())
                 throw new IOException("Cannot create " + completedPath.getAbsolutePath());
+        }
+    }
+
+    /**
+     * This method will reduce the cache until it is at most "toSize". The
+     * order in which files are removed is the last-accessed order. That is,
+     * the oldest not seen goes first. 
+     * @param toSize size to prune to
+     */
+    public void prune(long toSize) {
+        try {
+            long totalSize = 0;
+            SortedMap<FileTime, File> map = new TreeMap<FileTime, File>();
+            File dir = new File(fileAssetPath);
+            File[] list = dir.listFiles();
+            // Check on all files
+            for (File elem : list) {
+                Path file = FileSystems.getDefault().getPath(elem.getAbsolutePath());
+                BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+                FileTime time = attrs.lastAccessTime();
+                map.put(time, elem);
+                totalSize += elem.length();
+            }
+            // Prune according to sorting order
+            for (File elem : map.values()) {
+                if (totalSize <= toSize)
+                    break;
+                totalSize -= elem.length();
+                LOGGER.info("Removing from cache " + elem.getName());
+                elem.delete();
+            }
+        }
+        catch (IOException e) {
+            LOGGER.error("Can't prune the disc cache correctly", e);
         }
     }
 }

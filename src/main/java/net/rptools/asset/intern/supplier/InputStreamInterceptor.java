@@ -1,4 +1,4 @@
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.io.IOException;
 import java.io.InputStream;

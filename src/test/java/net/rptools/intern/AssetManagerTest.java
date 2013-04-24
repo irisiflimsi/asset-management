@@ -12,16 +12,18 @@
  * limitations under the License.
  *
  */
-package net.rptools;
+package net.rptools.intern;
 
 import static org.easymock.EasyMock.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-import java.io.IOException;
 import java.util.UUID;
 
-import net.rptools.asset.*;
+import net.rptools.asset.AssetListener;
+import net.rptools.asset.AssetManagerFactory;
+import net.rptools.asset.AssetSupplier;
+import net.rptools.asset.intern.*;
 
 import org.easymock.IAnswer;
 import org.junit.After;
@@ -36,7 +38,7 @@ public class AssetManagerTest {
 
     @Before
     public void setUp() throws Exception {
-        testObject = AssetManager.getInstance(null);
+        testObject = AssetManagerFactory.getInstance(null);
         mock1 = createMock("Mock1", AssetSupplier.class);
         mock2 = createMock("Mock2", AssetSupplier.class);
         expect(mock1.getPriority()).andReturn(1).anyTimes();

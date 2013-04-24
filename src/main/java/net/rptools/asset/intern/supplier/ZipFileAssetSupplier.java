@@ -12,16 +12,14 @@
  * limitations under the License.
  *
  */
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.*;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -30,20 +28,20 @@ import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
+import net.rptools.asset.intern.Asset;
 
 /**
  * Using NIO to get assets from ZIP files.
  * @author username
  */
-public class ZipFileAssetSupplier extends AbstractAssetSupplier {
+public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
     /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(ZipFileAssetSupplier.class.getSimpleName());
 
     /** Zipfile used */
     private FileSystem zipFile;
-    
+
     /** Zipfile path */
     private String zipFilePath;
 
@@ -83,7 +81,7 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
      * @return prepared image
      * @throws IOException in case any any problems occur
      */
-    private Asset loadImage(String id, URI uri, AssetListener listener) throws IOException {
+    protected Asset loadImage(String id, URI uri, AssetListener listener) {
         InputStream input = null;
         try {
             // This is a zip-local-URI;
@@ -103,8 +101,11 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
             return new Asset(null);
         }
         finally {
-            if (input != null)
+            try {
                 input.close(); // closes stream as well
+            }
+            catch (Exception e) { // includes NPE
+            }
         }
     }
 
@@ -139,24 +140,13 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public synchronized String create(String name, Asset obj, boolean update) {
+    public synchronized String create(Asset obj) {
         OutputStream stream = null;
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String id = UUID.randomUUID().toString();
-            // Set up name, if nothing useful is passed
-            if (name == null || name.length() == 0)
-                name = id;
-
-            if (knownAssets.containsValue(name)) {
-                if (update) {
-                    id = reverseLookup(name);
-                    Files.delete(zipFile.getPath(name)); // prepare for update
-                }
-                else {
-                    name = id; // Leave old asset be
-                }
-            }
+            // Set up name
+            String name = id;
             setAssetFile(id, name);
             Path entry = zipFile.getPath(name);
             stream = Files.newOutputStream(entry);
@@ -166,6 +156,38 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
         catch (Exception e) {
             LOGGER.warn("Create failed", e);
             return null;
+        }
+        finally {
+            try {
+                if (stream != null)
+                    stream.close();
+                reloadZipFile();
+            }
+            catch (IOException e) {
+                LOGGER.error("Closing stream failed", e);
+            }
+        }
+    }
+
+    @Override
+    public synchronized void update(String id, Asset obj) {
+        OutputStream stream = null;
+        try {
+            BufferedImage img = BufferedImage.class.cast(obj.getMain());
+            String name = getKnownAsset(id);
+            if (name != null) {
+                Files.delete(zipFile.getPath(name)); // prepare for update
+            }
+            else {
+                name = id;
+            }
+            setAssetFile(id, name);
+            Path entry = zipFile.getPath(name);
+            stream = Files.newOutputStream(entry);
+            ImageIO.write(img, obj.getFormat(), stream);
+        }
+        catch (Exception e) {
+            LOGGER.warn("Create failed", e);
         }
         finally {
             try {
@@ -208,7 +230,7 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
      * @param id id of the asset
      * @return asset name associate to id
      */
-    private String getKnownAsset(String id) {
+    protected String getKnownAsset(String id) {
         return knownAssets.getProperty(id);
     }
 
@@ -248,40 +270,5 @@ public class ZipFileAssetSupplier extends AbstractAssetSupplier {
             knownAssets.remove(id);
         else
             knownAssets.setProperty(id, name);
-    }
-
-    /**
-     * Lookup up the id for a file name.
-     * @param name file to look up
-     * @return id of the file name
-     */
-    private String reverseLookup(String name) {
-        for (Entry<Object, Object> entry : knownAssets.entrySet()) {
-            if (entry.getValue().equals(name))
-                return (String) entry.getKey();
-        }
-        return null;
-    }
-
-    @Override
-    public Asset get(String id, AssetListener listener) {
-        Asset result = null;
-        try {
-            URI uri = new URI(getKnownAsset(id));
-            LOGGER.info("Start loading " + id);
-            result = loadImage(id, uri, listener);
-            LOGGER.info("Finished loading " + id);
-        }
-        catch (URISyntaxException e) {
-            LOGGER.error(id + " is not an URL", e);
-        }
-        catch (IOException e) {
-            LOGGER.error(id + " cannot be correctly read", e);
-        }
-
-        if (listener != null) {
-            listener.notify(id, result);
-        }
-        return result;
     }
 }

@@ -1,11 +1,11 @@
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
+import net.rptools.asset.intern.Asset;
 
 /**
  * Memory asset cache.
@@ -85,5 +85,10 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     @Override
     public boolean remove(String id) {
         return (map.remove(id) != null);
+    }
+    
+    /** Clear cache; valid only for this supplier */
+    public void clear() {
+        map.clear();
     }
 }

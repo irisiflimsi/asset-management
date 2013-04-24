@@ -43,5 +43,4 @@ generally asynchronous retrieval is suggested.
 </ul>
 </p>
 */
-// TODO: Refactor for Interface and redundancy. Provide disc cache pruning.
 package net.rptools.asset;

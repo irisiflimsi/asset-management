@@ -12,7 +12,7 @@
  * limitations under the License.
  *
  */
-package net.rptools;
+package net.rptools.intern;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
@@ -22,9 +22,9 @@ import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import net.rptools.asset.Asset;
-import net.rptools.asset.AssetManager;
-import net.rptools.asset.supplier.DiskCacheAssetSupplier;
+import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.supplier.DiskCacheAssetSupplier;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -80,5 +80,21 @@ public class DiskCacheAssetSupplierTest {
         assertThat(testObject.remove(TESTID), is(true));
         // verify some more
         assertThat(testObject.remove(TESTID), is(false));
+    }
+    
+    @Test
+    public void testPrune() throws InterruptedException {
+        BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
+        String TESTID = "test-asset-";
+        // create
+        testObject.cache(TESTID + 1, new Asset(inAsset));
+        Thread.sleep(1100); // We need to get a difference in the last access time
+        testObject.cache(TESTID + 2, new Asset(inAsset));
+        Thread.sleep(1100); // We need to get a difference in the last access time
+        testObject.cache(TESTID + 3, new Asset(inAsset));
+        testObject.prune(70);
+        assertThat(testObject.has(TESTID + 1), is(false));
+        assertThat(testObject.has(TESTID + 2), is(false));
+        assertThat(testObject.has(TESTID + 3), is(true));
     }
 }

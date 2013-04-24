@@ -12,7 +12,7 @@
  * limitations under the License.
  *
  */
-package net.rptools;
+package net.rptools.intern;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
@@ -24,10 +24,10 @@ import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.AssetManager;
-import net.rptools.asset.supplier.HttpAssetSupplier;
+import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.supplier.HttpAssetSupplier;
 
 import org.junit.Before;
 import org.junit.Test;

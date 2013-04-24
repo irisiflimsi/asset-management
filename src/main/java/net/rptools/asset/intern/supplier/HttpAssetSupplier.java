@@ -12,7 +12,7 @@
  * limitations under the License.
  *
  */
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,11 +22,8 @@ import java.util.Properties;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.rptools.asset.intern.Asset;
 
 /**
  * This class provides access to HTTP URLs.
@@ -34,10 +31,7 @@ import org.slf4j.LoggerFactory;
  * We only provide BufferedImages currently.
  * @author username
  */
-public class HttpAssetSupplier extends  AbstractAssetSupplier {
-    /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
-
+public class HttpAssetSupplier extends  AbstractURIAssetSupplier {
     /** Notify partial interval */
     private long notifyInterval = 500; // millis
 
@@ -50,17 +44,18 @@ public class HttpAssetSupplier extends  AbstractAssetSupplier {
     /**
      * Constructor. Loads properties.
      * @param override properties to take precendence over default ones
+     * @param url URL to use as asset root
      * @throws IOException can't load properties
      * @throws URISyntaxException 
      * @throws  
      * @throws NumberFormatException if certain properties aren't numbers
      */
-    public HttpAssetSupplier(Properties override, String prefix) throws URISyntaxException, IOException {
+    public HttpAssetSupplier(Properties override, String url) throws URISyntaxException, IOException {
         super(override);
         this.notifyInterval = Long.parseLong(properties.getProperty(HttpAssetSupplier.class.getSimpleName() + ".notifyInterval"));
         this.priority = Integer.parseInt(properties.getProperty(HttpAssetSupplier.class.getSimpleName() + ".priority"));
         // Load index file
-        this.webAssetPath = prefix + (prefix.endsWith("/") ? "" : "/");
+        this.webAssetPath = url + (url.endsWith("/") ? "" : "/");
         loadIndexProperties();
     }
 
@@ -91,45 +86,14 @@ public class HttpAssetSupplier extends  AbstractAssetSupplier {
     }
 
     @Override
-    public Asset get(String id, AssetListener listener) {
-        Asset result = null;
-        try {
-            URI uri = new URI(webAssetPath + getKnownAsset(id));
-            LOGGER.info("Start loading " + id);
-            result = loadImage(id, uri, listener);
-            LOGGER.info("Finished loading " + id);
-        }
-        catch (URISyntaxException e) {
-            LOGGER.error(id + " is not an URL", e);
-            return null;
-        }
-        finally {
-            if (listener != null)
-                listener.notify(id, result);
-        }
-        return result;
+    protected String getKnownAsset(String id) {
+        return webAssetPath + knownAssets.getProperty(id);
     }
 
-    /**
-     * Direct reference getter, to be overloaded by subclasses
-     * @param id id of the asset
-     * @return asset name associate to id
-     */
-    private String getKnownAsset(String id) {
-        return knownAssets.getProperty(id);
-    }
-
-    /**
-     * Read the image, informing the listener once in a while.
-     * @param url url to get
-     * @param listener listener to inform
-     * @return prepared image
-     * @throws IOException in case any any problems occur
-     */
-    private Asset loadImage(String id, URI uri, AssetListener listener) {
-        URLConnection connection;
+    @Override
+    protected Asset loadImage(String id, URI uri, AssetListener listener) {
         try {
-            connection = uri.toURL().openConnection();
+            URLConnection connection = uri.toURL().openConnection();
             int assetLength = connection.getContentLength();
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
             return new Asset(ImageIO.read(input));

@@ -12,7 +12,7 @@
  * limitations under the License.
  *
  */
-package net.rptools;
+package net.rptools.intern;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
@@ -24,9 +24,9 @@ import java.net.URISyntaxException;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.Asset;
-import net.rptools.asset.AssetManager;
-import net.rptools.asset.supplier.FileAssetSupplier;
+import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.supplier.FileAssetSupplier;
 
 import org.junit.*;
 
@@ -87,8 +87,7 @@ public class FileAssetSupplierTest {
     @Test
     public void testCreateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
-        String name = example.toURI().toString();
-        String id = testObject.create(name, new Asset(asset), true);
+        String id = testObject.create(new Asset(asset));
         assertThat(id, not(equalTo("1234")));
         BufferedImage saved = (BufferedImage) testObject.get(id, null).getMain();
         assertThat(asset.getWidth(), is(equalTo(saved.getWidth())));
@@ -105,11 +104,9 @@ public class FileAssetSupplierTest {
     @Test
     public void testCreateDuplicateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
-        String name = example.toURI().toString();
-        String id = testObject.create(name, new Asset(asset), true);
-        String id2 = testObject.create(name, new Asset(asset), true);
-        assertThat(id, is(equalTo(id2)));
-        String id3 = testObject.create(name, new Asset(asset), false);
+        String id = testObject.create(new Asset(asset));
+        testObject.update(id, new Asset(asset));
+        String id3 = testObject.create(new Asset(asset));
         assertThat(id, is(not(equalTo(id3))));
 
         // "Other" asset
@@ -118,7 +115,7 @@ public class FileAssetSupplierTest {
         assertThat(asset.getHeight(), is(equalTo(saved.getHeight())));
 
         assertThat(testObject.remove(id), is(true));
-        assertThat(testObject.remove(id2), is(false));
+        assertThat(testObject.remove(id), is(false));
         assertThat(testObject.remove(id3), is(true));
 
         verifyIndexEmpty();

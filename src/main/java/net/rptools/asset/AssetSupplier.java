@@ -14,6 +14,8 @@
  */
 package net.rptools.asset;
 
+import net.rptools.asset.intern.Asset;
+
 /**
  * Asset supplier class. Each instance has a priority. The highest that claims
  * to provide a given asset will be picked. Any necessary thread
@@ -40,45 +42,36 @@ public interface AssetSupplier {
     public Asset get(String id, AssetListener listener);
 
     /**
-     * Can this supplier cache an asset of type clazz?
-     * Note that in some special cases the input class may differ
-     * from the output class used in #has.
+     * Can this supplier cache this asset?
      * @param obj asset to possibly cache.
      * @return whether this supplier caches.
      */
     public boolean canCache(Asset obj);
 
     /**
-     * Cache an asset of of type T.
-     * Note that in some special cases the input class may differ
-     * from the output class used in #get. This call is also used
-     * for updates ("upsert").
+     * Cache an asset. This call is also used for updates ("upsert").
      */
     public void cache(String id, Asset obj);
 
     /**
      * Can this supplier create an asset of type clazz?
-     * Note that in some special cases the input class may differ
-     * from the output class used in #has.
      * @return whether this supplier can create clazz objects.
      */
     public boolean canCreate(Class<?> clazz);
 
     /**
-     * Create an asset of of type T.
-     * Note that in some special cases the input class may differ
-     * from the output class used in #get. Please note the update
-     * semantics of this call.
-     * @param name to be resolved by the supplier, null the supplier should
-     *   create one. This is a complete URI for the common handlers.
-     *   If the name exists and update is true, the asset content is updated.
-     *   If update is false, but the name exists, the new name is the id.
+     * Create an asset.
      * @param obj object to be created
-     * @param update is this call an update?
      * @return new asset id or null, if creation failed.
-     * @throws RuntimeException when name is null or empty
      */
-    public String create(String name, Asset obj, boolean update);
+    public String create(Asset obj);
+
+    /**
+     * Update an asset.
+     * @param id to be resolved by the supplier.
+     * @param obj object used for update.
+     */
+    public void update(String id, Asset obj);
 
     /** Can this supplier remove the asset with given id? */
     public boolean canRemove(String id);

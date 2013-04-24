@@ -12,13 +12,13 @@
  * limitations under the License.
  *
  */
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.io.IOException;
 import java.util.Properties;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetSupplier;
+import net.rptools.asset.intern.Asset;
 
 /**
  * This class provides defaults for asset suppliers.
@@ -67,7 +67,12 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
     }
 
     @Override
-    public String create(String id, Asset obj, boolean update) {
+    public String create(Asset obj) {
+        throw new UnsupportedOperationException("AbstractAssetSupplier.create");
+    }
+
+    @Override
+    public void update(String id, Asset obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 

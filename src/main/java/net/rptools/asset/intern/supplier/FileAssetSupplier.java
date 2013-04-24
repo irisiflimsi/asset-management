@@ -12,19 +12,18 @@
  * limitations under the License.
  *
  */
-package net.rptools.asset.supplier;
+package net.rptools.asset.intern.supplier;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
+import net.rptools.asset.intern.Asset;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +33,9 @@ import org.slf4j.LoggerFactory;
  * We only provide BufferedImages currently.
  * @author username
  */
-public class FileAssetSupplier extends  AbstractAssetSupplier {
+public class FileAssetSupplier extends AbstractURIAssetSupplier {
     /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(FileAssetSupplier.class.getSimpleName());
 
     /** Notify partial interval */
     private long notifyInterval = 500; // millis
@@ -75,29 +74,34 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
     }
 
     @Override
-    public synchronized String create(String name, Asset obj, boolean update) {
+    public synchronized String create(Asset obj) {
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String id = UUID.randomUUID().toString();
             // Set up name, if nothing useful is passed
-            if (name == null || name.length() == 0)
-                name = "file://" + fileAssetPath + id;
-
-            if (knownAssets.containsValue(name)) {
-                if (update) {
-                    id = reverseLookup(name); // Update
-                }
-                else {
-                    name = "file://" + fileAssetPath + id; // Leave old asset be
-                }
-            }
+            String name = "file://" + fileAssetPath + id;
             File f = setAssetFile(id, name);
             ImageIO.write(img, obj.getFormat(), f);
             return id;
         }
         catch (Exception e) {
-            LOGGER.warn("Create failed for " + name, e);
+            LOGGER.warn("Create failed for " + obj, e);
             return null;
+        }
+    }
+
+    @Override
+    public synchronized void update(String id, Asset obj) {
+        try {
+            BufferedImage img = BufferedImage.class.cast(obj.getMain());
+            String name = getKnownAsset(id);
+            if (name == null)
+                name = "file://" + fileAssetPath + id;
+            File f = setAssetFile(id, name);
+            ImageIO.write(img, obj.getFormat(), f);
+        }
+        catch (Exception e) {
+            LOGGER.warn("Create failed for " + id, e);
         }
     }
 
@@ -182,12 +186,8 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
             knownAssets.setProperty(id, name);
     }
 
-    /**
-     * Direct reference getter, to be overloaded by subclasses
-     * @param id id of the asset
-     * @return asset name associate to id
-     */
-    private String getKnownAsset(String id) {
+    @Override
+    protected String getKnownAsset(String id) {
         return knownAssets.getProperty(id);
     }
 
@@ -229,47 +229,8 @@ public class FileAssetSupplier extends  AbstractAssetSupplier {
         }
     }
 
-    /**
-     * Lookup up the id for a file name.
-     * @param name file to look up
-     * @return id of the file name
-     */
-    private String reverseLookup(String name) {
-        for (Entry<Object, Object> entry : knownAssets.entrySet()) {
-            if (entry.getValue().equals(name))
-                return (String) entry.getKey();
-        }
-        return null;
-    }
-
     @Override
-    public Asset get(String id, AssetListener listener) {
-        Asset result = null;
-        try {
-            URI uri = new URI(getKnownAsset(id));
-            LOGGER.info("Start loading " + id);
-            result = loadImage(id, uri, listener);
-            LOGGER.info("Finished loading " + id);
-        }
-        catch (URISyntaxException e) {
-            LOGGER.error(id + " is not an URL", e);
-            return null;
-        }
-        finally {
-            if (listener != null) {
-                listener.notify(id, result);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Read the image, informing the listener once in a while.
-     * @param url url to get
-     * @param listener listener to inform
-     * @return prepared image
-     */
-    private Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected Asset loadImage(String id, URI uri, AssetListener listener) {
         try {
             URLConnection connection = uri.toURL().openConnection();
             int assetLength = connection.getContentLength();

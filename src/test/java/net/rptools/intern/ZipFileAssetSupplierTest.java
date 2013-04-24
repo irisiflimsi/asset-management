@@ -12,7 +12,7 @@
  * limitations under the License.
  *
  */
-package net.rptools;
+package net.rptools.intern;
 
 import static org.junit.Assert.*;
 
@@ -22,10 +22,10 @@ import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.Asset;
-import net.rptools.asset.AssetManager;
-import net.rptools.asset.supplier.FileAssetSupplier;
-import net.rptools.asset.supplier.ZipFileAssetSupplier;
+import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.supplier.FileAssetSupplier;
+import net.rptools.asset.intern.supplier.ZipFileAssetSupplier;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -42,8 +42,8 @@ public class ZipFileAssetSupplierTest {
     private final static String SEP = System.getProperty("file.separator");
 
     final private static String TEST_IMAGE = "Test.png";
-    final private static String TEST_ZIP = ".maptool/resources/test.zip";
-    final private static String TEST_ZIP_FULL = System.getProperty("user.dir") + ("/" + TEST_ZIP).replaceAll("/", SEP);
+    final private static String TEST_ZIP = ".maptool" + SEP + "resources" + SEP + "test.zip";
+    final private static String TEST_ZIP_FULL = System.getProperty("user.dir") + SEP + TEST_ZIP;
 
     private ZipFileAssetSupplier testObject;
 
@@ -81,7 +81,7 @@ public class ZipFileAssetSupplierTest {
     public void testCreateRemove() throws IOException {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
-        String id = testObject.create(TEST_IMAGE, new Asset(img), false);
+        String id = testObject.create(new Asset(img));
         assertThat(testObject.has("1234"), is(true));
         assertThat(testObject.has(id), is(true));
         // file check
@@ -102,9 +102,9 @@ public class ZipFileAssetSupplierTest {
     public void testUpdate() throws IOException {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
-        String id = testObject.create(TEST_IMAGE, new Asset(img), true);
+        String id = "1234";
+        testObject.update(id, new Asset(img));
         assertThat(testObject.has("1234"), is(true));
-        assertThat(id, is(equalTo("1234")));
         // file check
         File zip = new File(TEST_ZIP_FULL);
         assertTrue(zip.exists());
