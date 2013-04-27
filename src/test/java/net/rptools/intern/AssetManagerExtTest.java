@@ -4,7 +4,6 @@ import static org.easymock.EasyMock.*;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -12,10 +11,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.zip.ZipFile;
 
+import javax.imageio.ImageIO;
+
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
-
-import javax.imageio.ImageIO;
 
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetManagerFactory;
@@ -29,13 +28,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class AssetManagerExtTest {
-    final private static String SEP = System.getProperty("file.separator");
-    final private static String USER_DIR = System.getProperty("user.dir") + SEP;
-    final private static String TEST_DIR = ".maptool" + SEP + "resources" + SEP;
-    final private static String TEST_DIR2 = ".maptool" + SEP + "resources2" + SEP;
-    final private static String TEST_ZIP = ".maptool" + SEP + "resources" + SEP + "test.zip";
-    final private static String TEST_ZIP_FULL = System.getProperty("user.dir") + SEP + TEST_ZIP;
+public class AssetManagerExtTest extends TestConstants {
     private AssetManager testObject;
 
     @Before
@@ -46,7 +39,7 @@ public class AssetManagerExtTest {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         File dir = new File(USER_DIR + TEST_DIR2);
         for (File file : dir.listFiles())
             file.delete();
@@ -57,7 +50,7 @@ public class AssetManagerExtTest {
         AssetSupplier supplier2 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR2);
         testCopy(supplier2);
         File dir = new File(USER_DIR + TEST_DIR2);
-        assertThat(dir.list().length, equalTo(5)); // index + Test.png + 3 new assets
+        assertThat(dir.list().length, equalTo(4)); // index + 3 assets
     }
 
     @Test
@@ -65,7 +58,7 @@ public class AssetManagerExtTest {
         AssetSupplier supplier2 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR2);   
         testCopyUpdate(supplier2);
         File dir = new File(USER_DIR + TEST_DIR2);
-        assertThat(dir.list().length, equalTo(5)); // index + Test.png + 3 new assets
+        assertThat(dir.list().length, equalTo(4)); // index + 3 assets
     }
 
     @Test
@@ -191,21 +184,14 @@ public class AssetManagerExtTest {
         verify(listener, listener2);
     }
 
-    private BufferedImage fileSetup(String testdir) throws Exception {
-        String TEST_IMAGE = "Test.png";
-        String userDir = System.getProperty("user.dir") + SEP;
-        File example = new File(userDir + testdir + TEST_IMAGE);
-        URI uri = new URI(HttpAssetSupplierTest.TEST_IMAGE);
-        InputStream in = uri.toURL().openConnection().getInputStream();
-        OutputStream out = new FileOutputStream(example);
-        for (int read = in.read(); read != -1; read = in.read())
-            out.write(read);
-        out.close();
+    protected BufferedImage fileSetup(String testdir) throws Exception {
+        BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
+        ImageIO.write(img, "png", new File(USER_DIR + TEST_DIR + TEST_IMAGE));
 
-        File index = new File(userDir + testdir + "index");
+        File index = new File(USER_DIR + testdir + "index");
         PrintStream output = new PrintStream(new FileOutputStream(index));
         output.println("1234=" + TEST_IMAGE);
         output.close();
-        return ImageIO.read(example);
+        return img;
     }
 }

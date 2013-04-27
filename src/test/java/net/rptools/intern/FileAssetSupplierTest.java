@@ -19,7 +19,6 @@ import static org.junit.Assert.assertThat;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import javax.imageio.ImageIO;
@@ -30,29 +29,18 @@ import net.rptools.asset.intern.supplier.FileAssetSupplier;
 
 import org.junit.*;
 
-public class FileAssetSupplierTest {
-
-    /** local file separator constant */
-    private final static String SEP = System.getProperty("file.separator");
-
+public class FileAssetSupplierTest extends TestConstants {
     private FileAssetSupplier testObject;
-    private final static String TEST_DIR = ".maptool" + SEP + "resources" + SEP;
-    private final static String TEST_IMAGE = "Test.png";
     private File example;
     
     @Before
     public void setUp() throws Exception {
         tearDown();
-        String userDir = System.getProperty("user.dir") + SEP;
-        example = new File(userDir + TEST_DIR + TEST_IMAGE);
-        URI uri = new URI(HttpAssetSupplierTest.TEST_IMAGE);
-        InputStream in = uri.toURL().openConnection().getInputStream();
-        OutputStream out = new FileOutputStream(example);
-        for (int read = in.read(); read != -1; read = in.read())
-            out.write(read);
-        out.close();
+        BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
+        example = new File(USER_DIR + TEST_DIR + TEST_IMAGE);
+        ImageIO.write(img, "png", example);
 
-        File index = new File(userDir + TEST_DIR + "index");
+        File index = new File(USER_DIR + TEST_DIR + "index");
         PrintStream output = new PrintStream(new FileOutputStream(index));
         output.println("1234=" + TEST_IMAGE);
         output.close();
@@ -61,9 +49,8 @@ public class FileAssetSupplierTest {
     }
 
     @After
-    public void tearDown() {
-        String userDir = System.getProperty("user.dir") + SEP;
-        File dir = new File(userDir + TEST_DIR);
+    public void tearDown() throws Exception {
+        File dir = new File(USER_DIR + TEST_DIR);
         for (File rm : dir.listFiles())
             rm.delete();
     }

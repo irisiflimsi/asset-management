@@ -135,7 +135,7 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     protected Asset loadImage(String id, URI uri, AssetListener listener) {
         try {
             URLConnection connection = uri.toURL().openConnection();
-            int assetLength = connection.getContentLength();
+            int assetLength = Math.max(0, connection.getContentLength());
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
             return new Asset(ImageIO.read(input));
         }

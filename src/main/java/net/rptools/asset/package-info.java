@@ -51,7 +51,7 @@ generally asynchronous retrieval is suggested.
 <li>Disk cache: asset cache in a dedicated place on a local disk. Prio 50.</li>
 <li>Files: local file access, but may be mounted via network. Prio to be supplied.</li>
 <li>Zip files: extension of the above. Prio to be supplied.</li>
-<li>HTTP: Web based storages. Prio to be supplied./li>
+<li>HTTP: Web based storages. Prio to be supplied. (This should work for HTTP/SSL, but isn't tested.)</li>
 <li>Zip HTTP: archive extension of the above. Prio to be supplied. (TODO: Not implemented yet.)</li>
 <li>Server: a server process will provide assets. Prio to be supplied. (TODO: Not implemented yet.)</li>
 </ul>

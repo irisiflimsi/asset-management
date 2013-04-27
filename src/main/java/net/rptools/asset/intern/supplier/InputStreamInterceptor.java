@@ -28,7 +28,7 @@ import net.rptools.asset.AssetListener;
  */
 public class InputStreamInterceptor extends InputStream {
     /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(InputStreamInterceptor.class.getSimpleName());
 
     /** Intercepted input stream */
     private InputStream inputStream;
@@ -101,16 +101,16 @@ public class InputStreamInterceptor extends InputStream {
                 try {
                     LOGGER.info("notifyInterval: " + notifyInterval);
                     sleep(notifyInterval);
-                    LOGGER.info("Notifying " + remainder + "/" + assetLength);
                     double ratio = 0;
                     // remainder counts down from assetLength, which might be 0.
                     // In some valid cases, remainder may get negative
-                    if (assetLength >= remainder && assetLength > 0) {
-                        ratio = (assetLength - remainder)/(double)assetLength;
+                    if (remainder >= 0) {
+                        ratio = (assetLength + 1 - remainder)/(double)(assetLength + 1);
                     }
                     else {
-                        ratio = (assetLength - remainder)/(double)(assetLength - remainder - 1); // white (?) lie
+                        ratio = remainder/(double)(remainder - 1); // white (?) lie
                     }
+                    LOGGER.info("Notifying " + remainder + "&" + assetLength + "; ratio=" + ratio);
                     listener.notifyPartial(id, ratio);
                 }
                 catch (Exception e) {

@@ -31,7 +31,7 @@ import net.rptools.asset.intern.Asset;
  */
 public abstract class AbstractURIAssetSupplier extends AbstractAssetSupplier {
     /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    protected final static Logger LOGGER = LoggerFactory.getLogger(AbstractURIAssetSupplier.class.getSimpleName());
 
     /**
      * Constructor.
