@@ -100,8 +100,6 @@ public class HttpAssetSupplierTest extends TestConstants {
         listener.notify(eq(MY_ID), anyObject(Asset.class));
         replay(listener);
         Logger.getAnonymousLogger().warning("Exception test started");
-
-        //Asset png = 
         testObject.get(MY_ID, listener);
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         ImageIO.write(img, "png", new File(USER_DIR + TEST_DIR + TEST_IMAGE));
