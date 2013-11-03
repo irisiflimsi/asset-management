@@ -22,8 +22,8 @@ import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import net.rptools.asset.intern.Asset;
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetImpl;
+import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.DiskCacheAssetSupplier;
 
 import org.junit.AfterClass;
@@ -36,7 +36,7 @@ public class DiskCacheAssetSupplierTest {
 
     @Before
     public void setUp() throws Exception {
-        testObject = new DiskCacheAssetSupplier(AssetManager.getTotalProperties(null));
+        testObject = new DiskCacheAssetSupplier(AssetManagerImpl.getTotalProperties(null));
     }
 
     @AfterClass
@@ -48,8 +48,8 @@ public class DiskCacheAssetSupplierTest {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(new Asset(Math.PI)), is(false));
-        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(true));
+        assertThat(testObject.canCache(new AssetImpl(Math.PI)), is(false));
+        assertThat(testObject.canCache(new AssetImpl(new BufferedImage(1,1,1))), is(true));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
@@ -61,7 +61,7 @@ public class DiskCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(1, 2, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test-asset";
         // create
-        testObject.cache(TESTID, new Asset(inAsset));
+        testObject.cache(TESTID, new AssetImpl(inAsset));
         assertThat(testObject.has(TESTID), is(true));
         BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();
         // verify
@@ -74,7 +74,7 @@ public class DiskCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test-asset";
         // create
-        testObject.cache(TESTID, new Asset(inAsset));
+        testObject.cache(TESTID, new AssetImpl(inAsset));
         // verify delete
         assertThat(testObject.canRemove(TESTID), is(true));
         assertThat(testObject.remove(TESTID), is(true));
@@ -87,11 +87,11 @@ public class DiskCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test-asset-";
         // create
-        testObject.cache(TESTID + 1, new Asset(inAsset));
+        testObject.cache(TESTID + 1, new AssetImpl(inAsset));
         Thread.sleep(1100); // We need to get a difference in the last access time
-        testObject.cache(TESTID + 2, new Asset(inAsset));
+        testObject.cache(TESTID + 2, new AssetImpl(inAsset));
         Thread.sleep(1100); // We need to get a difference in the last access time
-        testObject.cache(TESTID + 3, new Asset(inAsset));
+        testObject.cache(TESTID + 3, new AssetImpl(inAsset));
         testObject.prune(70);
         assertThat(testObject.has(TESTID + 1), is(false));
         assertThat(testObject.has(TESTID + 2), is(false));

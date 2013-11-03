@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.Properties;
 
 import net.rptools.asset.AssetSupplier;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * This class provides defaults for asset suppliers.
@@ -52,12 +52,12 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
         this.priority = priority;
     }
     @Override
-    public boolean canCache(Asset obj) {
+    public boolean canCache(AssetImpl obj) {
         return false;
     }
 
     @Override
-    public void cache(String id, Asset obj) {
+    public void cache(String id, AssetImpl obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.cache");
     }
 
@@ -67,12 +67,12 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
     }
 
     @Override
-    public String create(Asset obj) {
+    public String create(AssetImpl obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 
     @Override
-    public void update(String id, Asset obj) {
+    public void update(String id, AssetImpl obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 

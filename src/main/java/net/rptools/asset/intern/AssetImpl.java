@@ -18,7 +18,7 @@ package net.rptools.asset.intern;
  * See the exported class. Used for poor-man's component separation.
  * @author username
  */
-public class Asset implements net.rptools.asset.Asset{
+public class AssetImpl implements net.rptools.asset.Asset{
     /** Asset object */
     private Object main;
 
@@ -26,7 +26,7 @@ public class Asset implements net.rptools.asset.Asset{
     private String format;
     
     /** Constructor taking only the main object as image(!) input */
-    public Asset(Object main) {
+    public AssetImpl(Object main) {
         this.main = main;
         setFormat("png");
     }
@@ -66,7 +66,7 @@ public class Asset implements net.rptools.asset.Asset{
         if (this == obj) return true;
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
-        Asset other = (Asset) obj;
+        AssetImpl other = (AssetImpl) obj;
         if (main == null) {
             if (other.main != null) return false;
         }

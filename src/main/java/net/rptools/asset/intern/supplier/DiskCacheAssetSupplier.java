@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * This class provides access to the disk cache.
@@ -61,12 +61,12 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public boolean canCache(Asset obj) {
+    public boolean canCache(AssetImpl obj) {
         return (obj.getType().equals(BufferedImage.class));
     }
 
     @Override
-    public synchronized void cache(String id, Asset obj) {
+    public synchronized void cache(String id, AssetImpl obj) {
         File testFile = getAssetFile(id);
         if (testFile == null) {
             LOGGER.info("Cannot cache asset " + id);
@@ -132,18 +132,18 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    protected Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected AssetImpl loadImage(String id, URI uri, AssetListener listener) {
         try {
             URLConnection connection = uri.toURL().openConnection();
             int assetLength = Math.max(0, connection.getContentLength());
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
-            return new Asset(ImageIO.read(input));
+            return new AssetImpl(ImageIO.read(input));
         }
         catch (MalformedURLException e) {
             return null;
         }
         catch (IOException e) {
-            return new Asset(null);
+            return new AssetImpl(null);
         }
     }
 
@@ -194,7 +194,8 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
                     break;
                 totalSize -= elem.length();
                 LOGGER.info("Removing from cache " + elem.getName());
-                elem.delete();
+                if (!elem.delete())
+                    LOGGER.error("Cannot delete: " + elem.getAbsolutePath());
             }
         }
         catch (IOException e) {

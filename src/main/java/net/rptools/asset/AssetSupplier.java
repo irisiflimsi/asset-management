@@ -14,7 +14,7 @@
  */
 package net.rptools.asset;
 
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * Asset supplier class. Each instance has a priority. The highest that claims
@@ -39,19 +39,19 @@ public interface AssetSupplier {
      * @param listener listener to inform on (partial) success 
      * @return correct object of the desired class or null.
      */
-    public Asset get(String id, AssetListener listener);
+    public AssetImpl get(String id, AssetListener listener);
 
     /**
      * Can this supplier cache this asset?
      * @param obj asset to possibly cache.
      * @return whether this supplier caches.
      */
-    public boolean canCache(Asset obj);
+    public boolean canCache(AssetImpl obj);
 
     /**
      * Cache an asset. This call is also used for updates ("upsert").
      */
-    public void cache(String id, Asset obj);
+    public void cache(String id, AssetImpl obj);
 
     /**
      * Can this supplier create an asset of type clazz?
@@ -64,14 +64,14 @@ public interface AssetSupplier {
      * @param obj object to be created
      * @return new asset id or null, if creation failed.
      */
-    public String create(Asset obj);
+    public String create(AssetImpl obj);
 
     /**
      * Update an asset.
      * @param id to be resolved by the supplier.
      * @param obj object used for update.
      */
-    public void update(String id, Asset obj);
+    public void update(String id, AssetImpl obj);
 
     /** Can this supplier remove the asset with given id? */
     public boolean canRemove(String id);

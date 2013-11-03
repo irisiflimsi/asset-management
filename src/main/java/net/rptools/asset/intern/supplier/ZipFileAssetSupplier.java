@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * Using NIO to get assets from ZIP files.
@@ -81,24 +81,20 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
      * @return prepared image
      * @throws IOException in case any any problems occur
      */
-    protected Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected AssetImpl loadImage(String id, URI uri, AssetListener listener) {
         InputStream input = null;
         try {
-            // This is a zip-local-URI;
-            Path entry = zipFile.getPath(uri.getPath());
-            InputStream stream = Files.newInputStream(entry);
-            long assetLength = Files.size(entry);
-            input = new InputStreamInterceptor(id, assetLength, stream, listener, notifyInterval);
+            input = getStreamFromZipEntry(id, uri, listener);
         }
         catch (IOException e) {
             // input == null
             return null;
         }
         try {
-            return new Asset(ImageIO.read(input));
+            return new AssetImpl(ImageIO.read(input));
         }
         catch (IOException e) {
-            return new Asset(null);
+            return new AssetImpl(null);
         }
         finally {
             try {
@@ -107,6 +103,23 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
             catch (Exception e) { // includes NPE
             }
         }
+    }
+
+    /**
+     * This method synchronizes access to the ziip file, consistent with other accesses.
+     * @param id asset-id being looked for
+     * @param uri element in zip file to seek
+     * @param listener listsner to be notified as load progresses.
+     * @return stream containing the asset
+     */
+    private synchronized InputStream getStreamFromZipEntry(String id, URI uri, AssetListener listener) throws IOException {
+        InputStream input;
+        // This is a zip-local-URI;
+        Path entry = zipFile.getPath(uri.getPath());
+        InputStream stream = Files.newInputStream(entry);
+        long assetLength = Files.size(entry);
+        input = new InputStreamInterceptor(id, assetLength, stream, listener, notifyInterval);
+        return input;
     }
 
     /**
@@ -140,7 +153,7 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized String create(Asset obj) {
+    public synchronized String create(AssetImpl obj) {
         OutputStream stream = null;
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
@@ -170,7 +183,7 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized void update(String id, Asset obj) {
+    public synchronized void update(String id, AssetImpl obj) {
         OutputStream stream = null;
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());

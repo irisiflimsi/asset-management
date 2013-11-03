@@ -21,8 +21,8 @@ import static org.junit.Assert.assertThat;
 import java.awt.image.BufferedImage;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetImpl;
+import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.MemCacheAssetSupplier;
 
 import org.junit.Before;
@@ -34,13 +34,13 @@ public class MemCacheAssetSupplierTest {
 
     @Before
     public void setUp() throws Exception {
-        testObject = new MemCacheAssetSupplier(AssetManager.getTotalProperties(null));
+        testObject = new MemCacheAssetSupplier(AssetManagerImpl.getTotalProperties(null));
     }
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(new Asset(Math.PI)), is(true));
-        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(true));
+        assertThat(testObject.canCache(new AssetImpl(Math.PI)), is(true));
+        assertThat(testObject.canCache(new AssetImpl(new BufferedImage(1,1,1))), is(true));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
         assertThat(MemCacheAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
     }
@@ -55,7 +55,7 @@ public class MemCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(1, 2, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test asset";
         // create
-        testObject.cache(TESTID, new Asset(inAsset));
+        testObject.cache(TESTID, new AssetImpl(inAsset));
         assertThat(testObject.has(TESTID), is(true));
         BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();
         // verify
@@ -74,9 +74,9 @@ public class MemCacheAssetSupplierTest {
         BufferedImage inAsset = new BufferedImage(3, 4, BufferedImage.TYPE_BYTE_GRAY);
         String TESTID = "test asset";
         // create
-        testObject.cache(TESTID, new Asset(inAsset));
+        testObject.cache(TESTID, new AssetImpl(inAsset));
         AssetListener listener = createMock("Listener", AssetListener.class);
-        listener.notify(eq(TESTID), eq(new Asset(inAsset)));
+        listener.notify(eq(TESTID), eq(new AssetImpl(inAsset)));
         replay(listener);
 
         BufferedImage outAsset = (BufferedImage) testObject.get(TESTID, null).getMain();

@@ -27,8 +27,8 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetImpl;
+import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.HttpAssetSupplier;
 
 import org.junit.After;
@@ -43,7 +43,7 @@ public class HttpAssetSupplierTest extends TestConstants {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         ImageIO.write(img, "png", new File(USER_DIR + TEST_DIR + TEST_IMAGE));
         HttpTestServer.start();
-        testObject = new HttpAssetSupplier(AssetManager.getTotalProperties(null), "http://localhost:8080");
+        testObject = new HttpAssetSupplier(AssetManagerImpl.getTotalProperties(null), "http://localhost:8080");
     }
 
     @After
@@ -56,7 +56,7 @@ public class HttpAssetSupplierTest extends TestConstants {
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(false));
+        assertThat(testObject.canCache(new AssetImpl(new BufferedImage(1,1,1))), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(false));
@@ -82,7 +82,7 @@ public class HttpAssetSupplierTest extends TestConstants {
         AssetListener listener = createMock("Listener", AssetListener.class);
         listener.notifyPartial(eq(MY_ID), anyDouble());
         expectLastCall().anyTimes();
-        listener.notify(eq(MY_ID), anyObject(Asset.class));
+        listener.notify(eq(MY_ID), anyObject(AssetImpl.class));
         replay(listener);
 
         BufferedImage png = (BufferedImage) testObject.get(MY_ID, listener).getMain();
@@ -97,7 +97,7 @@ public class HttpAssetSupplierTest extends TestConstants {
         AssetListener listener = createMock("Listener", AssetListener.class);
         listener.notifyPartial(eq(MY_ID), anyDouble());
         expectLastCall().andThrow(new TimeoutException());
-        listener.notify(eq(MY_ID), anyObject(Asset.class));
+        listener.notify(eq(MY_ID), anyObject(AssetImpl.class));
         replay(listener);
         Logger.getAnonymousLogger().warning("Exception test started");
         testObject.get(MY_ID, listener);

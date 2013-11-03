@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * Refactored class. Provides commonalities for UIR asset suppliers.
@@ -43,8 +43,8 @@ public abstract class AbstractURIAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public Asset get(String id, AssetListener listener) {
-        Asset result = null;
+    public AssetImpl get(String id, AssetListener listener) {
+        AssetImpl result = null;
         try {
             URI uri = new URI(getKnownAsset(id));
             LOGGER.info("Start loading " + id);
@@ -68,7 +68,7 @@ public abstract class AbstractURIAssetSupplier extends AbstractAssetSupplier {
      * @param listener listener to inform
      * @return prepared image
      */
-    abstract protected Asset loadImage(String id, URI uri, AssetListener listener);
+    abstract protected AssetImpl loadImage(String id, URI uri, AssetListener listener);
 
     /**
      * Direct reference getter, to be overloaded by subclasses

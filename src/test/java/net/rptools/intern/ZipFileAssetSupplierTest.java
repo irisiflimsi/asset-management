@@ -22,8 +22,8 @@ import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.intern.Asset;
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetImpl;
+import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.FileAssetSupplier;
 import net.rptools.asset.intern.supplier.ZipFileAssetSupplier;
 
@@ -55,12 +55,12 @@ public class ZipFileAssetSupplierTest {
         for (int b = source.read(); b != -1; b = source.read()) {
             destination.write(b);
         }
-        testObject = new ZipFileAssetSupplier(AssetManager.getTotalProperties(null), TEST_ZIP);
+        testObject = new ZipFileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_ZIP);
     }
 
     @Test
     public void testTrivialMethods() {
-        assertThat(testObject.canCache(new Asset(new BufferedImage(1, 1, 1))), is(false));
+        assertThat(testObject.canCache(new AssetImpl(new BufferedImage(1, 1, 1))), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(true));
         assertThat(FileAssetSupplier.DEFAULT_PRIORITY, is(not(equalTo(testObject.getPriority()))));
         assertThat(testObject.has("1234"), is(true));
@@ -81,7 +81,7 @@ public class ZipFileAssetSupplierTest {
     public void testCreateRemove() throws IOException {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
-        String id = testObject.create(new Asset(img));
+        String id = testObject.create(new AssetImpl(img));
         assertThat(testObject.has("1234"), is(true));
         assertThat(testObject.has(id), is(true));
         // file check
@@ -103,7 +103,7 @@ public class ZipFileAssetSupplierTest {
         BufferedImage img = ImageIO.read(ZipFileAssetSupplierTest.class.getClassLoader().getResourceAsStream(TEST_IMAGE));
         // create
         String id = "1234";
-        testObject.update(id, new Asset(img));
+        testObject.update(id, new AssetImpl(img));
         assertThat(testObject.has("1234"), is(true));
         // file check
         File zip = new File(TEST_ZIP_FULL);
