@@ -14,7 +14,6 @@
  */
 package net.rptools.asset.intern.supplier;
 
-import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.*;
 import java.net.*;
@@ -31,11 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
- * This class provides access to the disk cache.
- * We only provide BufferedImages currently.
+ * This class provides access to the disk cache. We only provide
+ * BufferedImages currently. (TODO: decide, whether this is a good
+ * choice with JavaFX.) It is discouraged to use the create
+ * method of caches.
  * @author username
  */
 public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
@@ -61,12 +62,7 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public boolean canCache(Asset obj) {
-        return (obj.getType().equals(BufferedImage.class));
-    }
-
-    @Override
-    public synchronized void cache(String id, Asset obj) {
+    public synchronized void update(String id, AssetImpl obj) {
         File testFile = getAssetFile(id);
         if (testFile == null) {
             LOGGER.info("Cannot cache asset " + id);
@@ -80,6 +76,18 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
         catch (Exception e) {
             LOGGER.error("Cannot cache asset " + id, e);
         }
+    }
+
+    @Override
+    public boolean canCreate(Class<?> clazz) {
+        return true;
+    }
+
+    @Override
+    public String create(AssetImpl obj) {
+        String id = UUID.randomUUID().toString();
+        update(id, obj);
+        return id;
     }
 
     @Override
@@ -132,18 +140,18 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    protected Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected AssetImpl loadImage(String id, URI uri, AssetListener listener) {
         try {
             URLConnection connection = uri.toURL().openConnection();
             int assetLength = Math.max(0, connection.getContentLength());
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
-            return new Asset(ImageIO.read(input));
+            return new AssetImpl(ImageIO.read(input));
         }
         catch (MalformedURLException e) {
             return null;
         }
         catch (IOException e) {
-            return new Asset(null);
+            return new AssetImpl(null);
         }
     }
 
@@ -194,7 +202,8 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
                     break;
                 totalSize -= elem.length();
                 LOGGER.info("Removing from cache " + elem.getName());
-                elem.delete();
+                if (!elem.delete())
+                    LOGGER.error("Cannot delete: " + elem.getAbsolutePath());
             }
         }
         catch (IOException e) {

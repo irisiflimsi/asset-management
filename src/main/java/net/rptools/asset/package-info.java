@@ -56,5 +56,11 @@ generally asynchronous retrieval is suggested.
 <li>Server: a server process will provide assets. Prio to be supplied. (TODO: Not implemented yet.)</li>
 </ul>
 </p>
+<p>
+Additionally, each AssetSupplier provides a priority that can aid in retrieval strategies. See the default
+strategy as an example. The current implementation only provides this default strategy. It is suggested
+to implement new strategies here as well and only provide a selection mechanism. Exposing a strategy
+class may lead to undertested strategies and potential havoc among suppliers.
+</p>
 */
 package net.rptools.asset;

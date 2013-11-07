@@ -23,7 +23,7 @@ import java.util.Properties;
 import javax.imageio.ImageIO;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 /**
  * This class provides access to HTTP URLs.
@@ -91,18 +91,18 @@ public class HttpAssetSupplier extends  AbstractURIAssetSupplier {
     }
 
     @Override
-    protected Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected AssetImpl loadImage(String id, URI uri, AssetListener listener) {
         try {
             HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
             long assetLength = Math.max(0, connection.getContentLengthLong());
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
-            return new Asset(ImageIO.read(input));
+            return new AssetImpl(ImageIO.read(input));
         }
         catch (MalformedURLException e) {
             return null;
         }
         catch (IOException e) {
-            return new Asset(null);
+            return new AssetImpl(null);
         }
     }
 }

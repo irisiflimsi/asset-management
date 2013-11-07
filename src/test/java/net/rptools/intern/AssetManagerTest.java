@@ -20,10 +20,9 @@ import static org.junit.Assert.assertThat;
 
 import java.util.UUID;
 
-import net.rptools.asset.AssetListener;
-import net.rptools.asset.AssetManagerFactory;
-import net.rptools.asset.AssetSupplier;
+import net.rptools.asset.*;
 import net.rptools.asset.intern.*;
+import net.rptools.asset.intern.supplier.FileAssetSupplier;
 
 import org.easymock.IAnswer;
 import org.junit.After;
@@ -33,14 +32,17 @@ import org.junit.Test;
 public class AssetManagerTest {
 
     private AssetManager testObject;
-    private AssetSupplier mock1;
-    private AssetSupplier mock2;
+    private FileAssetSupplier mock1;
+    private FileAssetSupplier mock2;
 
     @Before
     public void setUp() throws Exception {
         testObject = AssetManagerFactory.getInstance(null);
-        mock1 = createMock("Mock1", AssetSupplier.class);
-        mock2 = createMock("Mock2", AssetSupplier.class);
+        // We choose FileAssetSuppliers to mock, because they get picked up by
+        // the default strategy. They also don't produce (annoying) updates if
+        // a CacheSupplier were taken.
+        mock1 = createMock("Mock1", FileAssetSupplier.class);
+        mock2 = createMock("Mock2", FileAssetSupplier.class);
         expect(mock1.getPriority()).andReturn(1).anyTimes();
         expect(mock2.getPriority()).andReturn(2).anyTimes();
     }
@@ -97,9 +99,8 @@ public class AssetManagerTest {
 
         String id = UUID.randomUUID().toString();
         expect(mock1.has(id)).andReturn(true).anyTimes();
-        expect(mock1.get(id, null)).andReturn(new Asset(Math.PI)).anyTimes();
+        expect(mock1.get(id, null)).andReturn(new AssetImpl(Math.PI)).anyTimes();
         expect(mock2.has(id)).andReturn(false).anyTimes();
-        expect(mock2.canCache(anyObject(Asset.class))).andReturn(false).anyTimes();
         replay(mock1, mock2);
 
         testObject.registerAssetSupplier(mock1);
@@ -114,7 +115,7 @@ public class AssetManagerTest {
         assertThat(testObject, is(not(nullValue())));
 
         String id = UUID.randomUUID().toString();
-        expect(mock2.get(id, null)).andReturn(new Asset(Math.PI));
+        expect(mock2.get(id, null)).andReturn(new AssetImpl(Math.PI));
         expect(mock2.has(id)).andReturn(true);
         replay(mock1, mock2);
 
@@ -132,15 +133,15 @@ public class AssetManagerTest {
         final String id = UUID.randomUUID().toString();
         final AssetListener mockListener = createMock("Listener", AssetListener.class);
         expect(mock1.has(id)).andReturn(true);
-        IAnswer<Asset> answer = new IAnswer<Asset>() {
+        IAnswer<AssetImpl> answer = new IAnswer<AssetImpl>() {
             @Override
-            public Asset answer() throws Throwable {
-                mockListener.notify(id, new Asset(Math.PI));
-                return new Asset(Math.PI);
+            public AssetImpl answer() throws Throwable {
+                mockListener.notify(id, new AssetImpl(Math.PI));
+                return new AssetImpl(Math.PI);
             }
         };
         expect(mock1.get(id, mockListener)).andAnswer(answer);
-        mockListener.notify(eq(id), eq(new Asset(Math.PI)));
+        mockListener.notify(eq(id), eq(new AssetImpl(Math.PI)));
         replay(mock1, mock2, mockListener);
 
         testObject.registerAssetSupplier(mock1); // mock1

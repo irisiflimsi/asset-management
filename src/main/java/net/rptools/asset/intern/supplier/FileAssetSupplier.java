@@ -23,7 +23,7 @@ import java.util.UUID;
 import javax.imageio.ImageIO;
 
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.Asset;
+import net.rptools.asset.intern.AssetImpl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +74,7 @@ public class FileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized String create(Asset obj) {
+    public synchronized String create(AssetImpl obj) {
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String id = UUID.randomUUID().toString();
@@ -91,7 +91,7 @@ public class FileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized void update(String id, Asset obj) {
+    public synchronized void update(String id, AssetImpl obj) {
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
             String name = getKnownAsset(id);
@@ -230,18 +230,18 @@ public class FileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    protected Asset loadImage(String id, URI uri, AssetListener listener) {
+    protected AssetImpl loadImage(String id, URI uri, AssetListener listener) {
         try {
             URLConnection connection = uri.toURL().openConnection();
             int assetLength = Math.max(0, connection.getContentLength());
             InputStream input = new InputStreamInterceptor(id, assetLength, connection.getInputStream(), listener, notifyInterval);
-            return new Asset(ImageIO.read(input));
+            return new AssetImpl(ImageIO.read(input));
         }
         catch (MalformedURLException e) {
             return null;
         }
         catch (IOException e) {
-            return new Asset(null);
+            return new AssetImpl(null);
         }
     }
 }

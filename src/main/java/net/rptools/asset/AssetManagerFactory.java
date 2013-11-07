@@ -16,7 +16,7 @@ package net.rptools.asset;
 
 import java.util.Properties;
 
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetManagerImpl;
 
 /**
  * This class exists in the client and in the server and is responsible for
@@ -36,7 +36,7 @@ public class AssetManagerFactory {
      */
     public static synchronized AssetManager getInstance(Properties properties) throws Exception {
         if (assetManager == null)
-            assetManager = new AssetManager(properties);
+            assetManager = new AssetManagerImpl(properties);
         return assetManager;
     }
 }

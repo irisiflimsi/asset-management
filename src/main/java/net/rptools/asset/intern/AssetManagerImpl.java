@@ -31,7 +31,7 @@ import net.rptools.asset.intern.supplier.*;
  * See the exported class. Used for poor-man's component separation.
  * @author username
  */
-public class AssetManager implements net.rptools.asset.AssetManager {
+public class AssetManagerImpl implements net.rptools.asset.AssetManager {
     /** Logging */
     private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
 
@@ -47,7 +47,7 @@ public class AssetManager implements net.rptools.asset.AssetManager {
      * @param properties properties to initialize suppliers with
      * @throws Exception instantiation or property retrieval problems
      */
-    public AssetManager(Properties properties) throws Exception {
+    public AssetManagerImpl(Properties properties) throws Exception {
         SortedSet<AssetSupplier> set = new TreeSet<AssetSupplier>(new Comparator<AssetSupplier>() {
             @Override
             public int compare(AssetSupplier high, AssetSupplier low) {
@@ -76,7 +76,7 @@ public class AssetManager implements net.rptools.asset.AssetManager {
     }
 
     @Override
-    public Asset getAsset(String id, boolean cache) {
+    public AssetImpl getAsset(String id, boolean cache) {
         return getAsset(id, null, cache);
     }
 
@@ -93,33 +93,11 @@ public class AssetManager implements net.rptools.asset.AssetManager {
     }
 
     @Override
-    public void createAsset(final Asset obj, final AssetListener listener, final boolean cache) throws IOException {
-        AssetSupplier tmpPrioSupplier = null;
-        // Create this in the highest repo only
-        for (AssetSupplier supplier : assetSuppliers) {
-            if (supplier.canCreate(obj.getType())) {
-                tmpPrioSupplier = supplier;
-                break;
-            }
-        }
-        final AssetSupplier prioSupplier = tmpPrioSupplier;
-        if (prioSupplier == null) throw new IOException("No creating AssetSupplier found");
-
-        // User already has the object. Let's not let him wait.
+    public void createAsset(final AssetImpl obj, final AssetListener listener, final boolean cache) {
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                String id = prioSupplier.create(obj);
-                if (listener != null)
-                    listener.notify(id, obj);
-                
-                Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
-                for (AssetSupplier supplier : assetSuppliers) {
-                    if (cache && supplier.canCache(obj)) {
-                        updateSet.add(supplier);
-                    }
-                }
-                updateCaches(id, updateSet, obj);
+                DefaultSupplierSelectionStrategy.createAsset(assetSuppliers, obj, listener, cache);
             }
         });
     }
@@ -141,7 +119,7 @@ public class AssetManager implements net.rptools.asset.AssetManager {
                 // We are copying "through memory", because it is comprehensible solution, although it
                 // would (probably) be more efficient treating each type separately through NIO.
                 for (String id : ids) {
-                    Asset obj = getAsset(id, false);
+                    AssetImpl obj = getAsset(id, false);
                     if (obj != null) {
                         if (supplier.has(id) && !update) {
                             id = supplier.create(obj);
@@ -193,40 +171,11 @@ public class AssetManager implements net.rptools.asset.AssetManager {
     /**
      * Main method for both getAsset and getAssetAsync.
      */
-    private Asset getAsset(String id, AssetListener listener, boolean cache) {
+    private AssetImpl getAsset(String id, AssetListener listener, boolean cache) {
         if (id == null)
             throw new NullPointerException("getAsset: id is null");
 
-        Set<AssetSupplier> updateSet = new HashSet<AssetSupplier>();
-
-        AssetSupplier usedSupplier = null;
-        for (AssetSupplier supplier : assetSuppliers) {
-            // Take the first one
-            if (usedSupplier == null && supplier.has(id)) {
-                usedSupplier = supplier;
-            }
-            // Check caching
-            if (cache && usedSupplier != supplier && !supplier.has(id)) {
-                updateSet.add(supplier);
-            }
-        }
-        Asset obj = usedSupplier.get(id, listener);
-        updateCaches(id, updateSet, obj);
-        return obj;
-    }
-
-    /**
-     * Update caches with a new object.
-     * @param id asset id to update
-     * @param updateSet caches to update
-     * @param obj new object for the given id
-     */
-    private void updateCaches(String id, Set<AssetSupplier> updateSet, Asset obj) {
-        // Now update
-        for (AssetSupplier supplier : updateSet) {
-            if (supplier.canCache(obj))
-                supplier.cache(id, obj);
-        }
+        return DefaultSupplierSelectionStrategy.getAssetByStrategy(assetSuppliers, id, listener, cache);
     }
 
     /**
@@ -248,7 +197,7 @@ public class AssetManager implements net.rptools.asset.AssetManager {
      */
     public static Properties getTotalProperties(Properties override) throws IOException {
         Properties properties = new Properties();
-        InputStream defaultsStream = AssetManager.class.getClassLoader().getResourceAsStream("asset-management.properties");
+        InputStream defaultsStream = AssetManagerImpl.class.getClassLoader().getResourceAsStream("asset-management.properties");
         properties.load(defaultsStream);
         defaultsStream.close();
         if (override != null) {

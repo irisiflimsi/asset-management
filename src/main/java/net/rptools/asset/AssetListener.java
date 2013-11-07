@@ -16,8 +16,6 @@ package net.rptools.asset;
 
 import java.util.concurrent.TimeoutException;
 
-import net.rptools.asset.intern.Asset;
-
 /**
  * Asynchrounous retrieval notification interface. To be implemented by callers of
  * getAssetAsync. Partial retrieval is notified at the asset handlers option.

@@ -23,8 +23,8 @@ import java.net.URISyntaxException;
 
 import javax.imageio.ImageIO;
 
-import net.rptools.asset.intern.Asset;
-import net.rptools.asset.intern.AssetManager;
+import net.rptools.asset.intern.AssetImpl;
+import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.FileAssetSupplier;
 
 import org.junit.*;
@@ -45,7 +45,7 @@ public class FileAssetSupplierTest extends TestConstants {
         output.println("1234=" + TEST_IMAGE);
         output.close();
 
-        testObject = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR);
+        testObject = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR);
     }
 
     @After
@@ -57,7 +57,6 @@ public class FileAssetSupplierTest extends TestConstants {
 
     @Test
     public void testTrivialMethods() throws URISyntaxException, IOException {
-        assertThat(testObject.canCache(new Asset(new BufferedImage(1,1,1))), is(false));
         assertThat(testObject.canRemove(null), is(false));
         assertThat(testObject.remove(null), is(false));
         assertThat(testObject.canCreate(BufferedImage.class), is(true));
@@ -66,15 +65,10 @@ public class FileAssetSupplierTest extends TestConstants {
         verifyIndexEmpty();
     }
 
-    @Test(expected=UnsupportedOperationException.class)
-    public void testCacheFails() {
-        testObject.cache(null, null);
-    }
-    
     @Test
     public void testCreateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
-        String id = testObject.create(new Asset(asset));
+        String id = testObject.create(new AssetImpl(asset));
         assertThat(id, not(equalTo("1234")));
         BufferedImage saved = (BufferedImage) testObject.get(id, null).getMain();
         assertThat(asset.getWidth(), is(equalTo(saved.getWidth())));
@@ -91,9 +85,9 @@ public class FileAssetSupplierTest extends TestConstants {
     @Test
     public void testCreateDuplicateDelete() throws IOException {
         BufferedImage asset = ImageIO.read(example);
-        String id = testObject.create(new Asset(asset));
-        testObject.update(id, new Asset(asset));
-        String id3 = testObject.create(new Asset(asset));
+        String id = testObject.create(new AssetImpl(asset));
+        testObject.update(id, new AssetImpl(asset));
+        String id3 = testObject.create(new AssetImpl(asset));
         assertThat(id, is(not(equalTo(id3))));
 
         // "Other" asset

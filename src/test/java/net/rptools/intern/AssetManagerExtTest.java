@@ -16,9 +16,7 @@ import javax.imageio.ImageIO;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
-import net.rptools.asset.AssetListener;
-import net.rptools.asset.AssetManagerFactory;
-import net.rptools.asset.AssetSupplier;
+import net.rptools.asset.*;
 import net.rptools.asset.intern.*;
 import net.rptools.asset.intern.supplier.FileAssetSupplier;
 import net.rptools.asset.intern.supplier.ZipFileAssetSupplier;
@@ -47,7 +45,7 @@ public class AssetManagerExtTest extends TestConstants {
 
     @Test
     public void testCopyFile() throws Exception {
-        AssetSupplier supplier2 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR2);
+        AssetSupplier supplier2 = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR2);
         testCopy(supplier2);
         File dir = new File(USER_DIR + TEST_DIR2);
         assertThat(dir.list().length, equalTo(4)); // index + 3 assets
@@ -55,7 +53,7 @@ public class AssetManagerExtTest extends TestConstants {
 
     @Test
     public void testCopyUpdateFile() throws Exception {
-        AssetSupplier supplier2 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR2);   
+        AssetSupplier supplier2 = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR2);   
         testCopyUpdate(supplier2);
         File dir = new File(USER_DIR + TEST_DIR2);
         assertThat(dir.list().length, equalTo(4)); // index + 3 assets
@@ -63,7 +61,7 @@ public class AssetManagerExtTest extends TestConstants {
 
     @Test
     public void testCopyZip() throws Exception {
-        AssetSupplier supplier2 = new ZipFileAssetSupplier(AssetManager.getTotalProperties(null), TEST_ZIP);
+        AssetSupplier supplier2 = new ZipFileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_ZIP);
         testCopy(supplier2);
         ZipFile zip = new ZipFile(TEST_ZIP_FULL);
         zip.entries();
@@ -71,7 +69,7 @@ public class AssetManagerExtTest extends TestConstants {
 
     @Test
     public void testCopyUpdateZip() throws Exception {
-        AssetSupplier supplier2 = new ZipFileAssetSupplier(AssetManager.getTotalProperties(null), TEST_ZIP);   
+        AssetSupplier supplier2 = new ZipFileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_ZIP);   
         testCopyUpdate(supplier2);
     }
 
@@ -80,11 +78,11 @@ public class AssetManagerExtTest extends TestConstants {
         BufferedImage example = fileSetup(TEST_DIR);
 
         // Mocks
-        AssetSupplier supplier1 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR);
+        AssetSupplier supplier1 = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR);
         AssetListener listener = createMock("Listener", AssetListener.class);
         final List<String> ids = new ArrayList<String>();
         final CountDownLatch latch = new CountDownLatch(3);
-        listener.notify(anyObject(String.class), anyObject(Asset.class));
+        listener.notify(anyObject(String.class), anyObject(AssetImpl.class));
         expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
             public Object answer() {
@@ -97,7 +95,7 @@ public class AssetManagerExtTest extends TestConstants {
         }).anyTimes();
         AssetListener listener2 = createMock("Listener2", AssetListener.class);
         final CountDownLatch latch2 = new CountDownLatch(3);
-        listener2.notify(anyObject(String.class), anyObject(Asset.class));
+        listener2.notify(anyObject(String.class), anyObject(AssetImpl.class));
         expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
             public Object answer() {
@@ -113,7 +111,7 @@ public class AssetManagerExtTest extends TestConstants {
         // Prepare
         testObject.registerAssetSupplier(supplier1);
         for (int i = 0; i < 3; i++) {
-            testObject.createAsset(new Asset(example), listener, false);
+            testObject.createAsset(new AssetImpl(example), listener, false);
         }
         assertThat(latch.await(5000, TimeUnit.MILLISECONDS), is(true));
 
@@ -134,11 +132,11 @@ public class AssetManagerExtTest extends TestConstants {
         BufferedImage example = fileSetup(TEST_DIR);
 
         // Mocks
-        AssetSupplier supplier1 = new FileAssetSupplier(AssetManager.getTotalProperties(null), TEST_DIR);
+        AssetSupplier supplier1 = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR);
         AssetListener listener = createMock("Listener", AssetListener.class);
         final List<String> ids = new ArrayList<String>();
         final CountDownLatch latch = new CountDownLatch(3);
-        listener.notify(anyObject(String.class), anyObject(Asset.class));
+        listener.notify(anyObject(String.class), anyObject(AssetImpl.class));
         expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
             public Object answer() {
@@ -151,7 +149,7 @@ public class AssetManagerExtTest extends TestConstants {
         }).anyTimes();
         AssetListener listener2 = createMock("Listener2", AssetListener.class);
         final CountDownLatch latch2 = new CountDownLatch(6);
-        listener2.notify(anyObject(String.class), anyObject(Asset.class));
+        listener2.notify(anyObject(String.class), anyObject(AssetImpl.class));
         expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
             public Object answer() {
@@ -167,7 +165,7 @@ public class AssetManagerExtTest extends TestConstants {
         // Prepare
         testObject.registerAssetSupplier(supplier1);
         for (int i = 0; i < 3; i++) {
-            testObject.createAsset(new Asset(example), listener, false);
+            testObject.createAsset(new AssetImpl(example), listener, false);
         }
         assertThat(latch.await(5000, TimeUnit.MILLISECONDS), is(true));
 
