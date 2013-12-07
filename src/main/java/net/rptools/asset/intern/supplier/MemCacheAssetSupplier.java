@@ -18,8 +18,8 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
-import net.rptools.asset.intern.AssetImpl;
 
 /**
  * Memory asset cache. It is discouraged to use the create method of caches.
@@ -27,11 +27,11 @@ import net.rptools.asset.intern.AssetImpl;
  */
 public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     /** simple map */
-    private Map<String, WeakReference<AssetImpl>> map =
-            Collections.synchronizedMap(new HashMap<String, WeakReference<AssetImpl>>());
+    private Map<String, WeakReference<Asset>> map =
+            Collections.synchronizedMap(new HashMap<String, WeakReference<Asset>>());
 
     /** precautionary alive set */
-    private Set<AssetImpl> alive = Collections.synchronizedSet(new HashSet<AssetImpl>());
+    private Set<Asset> alive = Collections.synchronizedSet(new HashSet<Asset>());
 
     /**
      * Constructor. Priorities specific to this class.
@@ -47,8 +47,8 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     public boolean has(String id) {
         // Note that this is volatile but we need to keep the reference from
         // being gc'ed in the next second
-        final WeakReference<AssetImpl> ref = map.get(id);
-        final AssetImpl obj = (ref != null ? ref.get() : null);
+        final WeakReference<Asset> ref = map.get(id);
+        final Asset obj = (ref != null ? ref.get() : null);
 
         Thread keepAlive = new Thread() {
             @Override
@@ -70,9 +70,9 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public AssetImpl get(String id, AssetListener listener) {
-        WeakReference<AssetImpl> ref = map.get(id);
-        AssetImpl obj = null;
+    public Asset get(String id, AssetListener listener) {
+        WeakReference<Asset> ref = map.get(id);
+        Asset obj = null;
         if (ref != null)
             obj = ref.get();
         if (listener != null)
@@ -86,15 +86,15 @@ public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     }
 
     @Override
-    public String create(AssetImpl obj) {
+    public String create(Asset obj) {
         String id = UUID.randomUUID().toString();
         update(id, obj);
         return id;
     }
 
     @Override
-    public void update(String id, AssetImpl obj) {
-        WeakReference<AssetImpl> ref = new WeakReference<AssetImpl>(obj);
+    public void update(String id, Asset obj) {
+        WeakReference<Asset> ref = new WeakReference<Asset>(obj);
         map.put(id, ref);
     }
 

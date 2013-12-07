@@ -20,9 +20,14 @@ import static org.junit.Assert.assertThat;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URISyntaxException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.imageio.ImageIO;
 
+import net.rptools.asset.Asset;
+import net.rptools.asset.AssetListener;
 import net.rptools.asset.intern.AssetImpl;
 import net.rptools.asset.intern.AssetManagerImpl;
 import net.rptools.asset.intern.supplier.FileAssetSupplier;
@@ -45,7 +50,7 @@ public class FileAssetSupplierTest extends TestConstants {
         output.println("1234=" + TEST_IMAGE);
         output.close();
 
-        testObject = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), TEST_DIR);
+        testObject = new FileAssetSupplier(AssetManagerImpl.getTotalProperties(null), USER_DIR + TEST_DIR);
     }
 
     @After
@@ -102,6 +107,21 @@ public class FileAssetSupplierTest extends TestConstants {
         verifyIndexEmpty();
     }
 
+    @Test
+    public void testGet() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        testObject.get("1234", new AssetListener() {
+            @Override
+            public void notify(String id, Asset obj) {
+                assertThat(obj, is(notNullValue()));
+                latch.countDown();
+            }
+            @Override
+            public void notifyPartial(String id, double completed) throws TimeoutException {
+            }
+        });
+        assertThat(latch.await(1, TimeUnit.SECONDS), is(true));
+    }
     // Further method tests are identical to Http and handled there.
 
     private static void verifyIndexEmpty() {

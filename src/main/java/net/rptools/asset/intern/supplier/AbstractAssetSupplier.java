@@ -17,8 +17,8 @@ package net.rptools.asset.intern.supplier;
 import java.io.IOException;
 import java.util.Properties;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetSupplier;
-import net.rptools.asset.intern.AssetImpl;
 
 /**
  * This class provides defaults for asset suppliers.
@@ -58,12 +58,12 @@ public abstract class AbstractAssetSupplier implements AssetSupplier {
     }
 
     @Override
-    public String create(AssetImpl obj) {
+    public String create(Asset obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 
     @Override
-    public void update(String id, AssetImpl obj) {
+    public void update(String id, Asset obj) {
         throw new UnsupportedOperationException("AbstractAssetSupplier.create");
     }
 

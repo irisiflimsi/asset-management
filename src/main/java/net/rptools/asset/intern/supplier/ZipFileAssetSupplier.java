@@ -28,6 +28,7 @@ import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.intern.AssetImpl;
 
@@ -153,7 +154,7 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized String create(AssetImpl obj) {
+    public synchronized String create(Asset obj) {
         OutputStream stream = null;
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());
@@ -183,7 +184,7 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public synchronized void update(String id, AssetImpl obj) {
+    public synchronized void update(String id, Asset obj) {
         OutputStream stream = null;
         try {
             BufferedImage img = BufferedImage.class.cast(obj.getMain());

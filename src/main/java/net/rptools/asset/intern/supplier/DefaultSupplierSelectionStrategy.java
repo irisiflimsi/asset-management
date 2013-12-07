@@ -2,9 +2,9 @@ package net.rptools.asset.intern.supplier;
 
 import java.util.SortedSet;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetSupplier;
-import net.rptools.asset.intern.AssetImpl;
 
 /**
  * Default supplier selection strategy. When reading we choose the suppliers
@@ -29,12 +29,12 @@ public class DefaultSupplierSelectionStrategy {
      * @param cache whether to cache the obtained asset
      * @return the asset sought for
      */
-    public static AssetImpl getAssetByStrategy(SortedSet<AssetSupplier> assetSuppliers, String id, AssetListener listener, boolean cache) {
+    public static Asset getAssetByStrategy(SortedSet<AssetSupplier> assetSuppliers, String id, AssetListener listener, boolean cache) {
         for (Class<?> clazz : order) {
             for (AssetSupplier supplier : assetSuppliers) {
                 if (clazz.isInstance(supplier)) {
                     if (supplier.has(id)) {
-                        AssetImpl obj = supplier.get(id, listener);
+                        Asset obj = supplier.get(id, listener);
                         if (cache)
                             updateCaches(id, assetSuppliers, obj);
                         return obj;
@@ -52,7 +52,7 @@ public class DefaultSupplierSelectionStrategy {
      * @param cache whether to cache the obtained asset
      * @param obj asset to store/create
      */
-    public static void createAsset(SortedSet<AssetSupplier> assetSuppliers, final AssetImpl obj, final AssetListener listener, final boolean cache) {
+    public static void createAsset(SortedSet<AssetSupplier> assetSuppliers, final Asset obj, final AssetListener listener, final boolean cache) {
         for (AssetSupplier supplier : assetSuppliers) {
             if (supplier instanceof FileAssetSupplier && supplier.canCreate(obj.getType())) {
                 String id = supplier.create(obj);
@@ -71,7 +71,7 @@ public class DefaultSupplierSelectionStrategy {
      * @param updateSet caches to update
      * @param obj new object for the given id
      */
-    private static void updateCaches(String id, SortedSet<AssetSupplier> updateSet, AssetImpl obj) {
+    private static void updateCaches(String id, SortedSet<AssetSupplier> updateSet, Asset obj) {
         // Now update
         for (AssetSupplier supplier : updateSet) {
             if (supplier instanceof DiskCacheAssetSupplier || supplier instanceof MemCacheAssetSupplier)

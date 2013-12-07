@@ -14,8 +14,6 @@
  */
 package net.rptools.asset;
 
-import net.rptools.asset.intern.AssetImpl;
-
 /**
  * Asset supplier class. Each instance has a priority to aid strategies
  * when selecting where to read from or write to. Any necessary thread
@@ -49,7 +47,7 @@ public interface AssetSupplier {
      * @param listener listener to inform on (partial) success 
      * @return correct object of the desired class or null.
      */
-    public AssetImpl get(String id, AssetListener listener);
+    public Asset get(String id, AssetListener listener);
 
     /**
      * Can this supplier create an asset of type clazz?
@@ -62,7 +60,7 @@ public interface AssetSupplier {
      * @param obj object to be created
      * @return new asset id or null, if creation failed.
      */
-    public String create(AssetImpl obj);
+    public String create(Asset obj);
 
     /**
      * Update an asset. Note that this should be implemented as upsert.
@@ -70,7 +68,7 @@ public interface AssetSupplier {
      * @param id to be resolved by the supplier.
      * @param obj object used for update.
      */
-    public void update(String id, AssetImpl obj);
+    public void update(String id, Asset obj);
 
     /** Can this supplier remove the asset with given id? */
     public boolean canRemove(String id);

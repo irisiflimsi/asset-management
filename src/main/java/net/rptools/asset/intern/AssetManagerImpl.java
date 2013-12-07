@@ -23,6 +23,7 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.AssetSupplier;
 import net.rptools.asset.intern.supplier.*;
@@ -33,7 +34,7 @@ import net.rptools.asset.intern.supplier.*;
  */
 public class AssetManagerImpl implements net.rptools.asset.AssetManager {
     /** Logging */
-    private final static Logger LOGGER = LoggerFactory.getLogger(DiskCacheAssetSupplier.class.getSimpleName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(AssetManagerImpl.class.getSimpleName());
 
     /** Our thread pool */
     private ExecutorService executors = Executors.newCachedThreadPool();
@@ -76,7 +77,7 @@ public class AssetManagerImpl implements net.rptools.asset.AssetManager {
     }
 
     @Override
-    public AssetImpl getAsset(String id, boolean cache) {
+    public Asset getAsset(String id, boolean cache) {
         return getAsset(id, null, cache);
     }
 
@@ -93,7 +94,7 @@ public class AssetManagerImpl implements net.rptools.asset.AssetManager {
     }
 
     @Override
-    public void createAsset(final AssetImpl obj, final AssetListener listener, final boolean cache) {
+    public void createAsset(final Asset obj, final AssetListener listener, final boolean cache) {
         executors.execute(new Runnable() {
             @Override
             public void run() {
@@ -116,10 +117,10 @@ public class AssetManagerImpl implements net.rptools.asset.AssetManager {
         executors.execute(new Runnable() {
             @Override
             public void run() {
-                // We are copying "through memory", because it is comprehensible solution, although it
+                // We are copying "through memory", because it is a comprehensible solution, although it
                 // would (probably) be more efficient treating each type separately through NIO.
                 for (String id : ids) {
-                    AssetImpl obj = getAsset(id, false);
+                    Asset obj = getAsset(id, false);
                     if (obj != null) {
                         if (supplier.has(id) && !update) {
                             id = supplier.create(obj);
@@ -171,7 +172,7 @@ public class AssetManagerImpl implements net.rptools.asset.AssetManager {
     /**
      * Main method for both getAsset and getAssetAsync.
      */
-    private AssetImpl getAsset(String id, AssetListener listener, boolean cache) {
+    private Asset getAsset(String id, AssetListener listener, boolean cache) {
         if (id == null)
             throw new NullPointerException("getAsset: id is null");
 

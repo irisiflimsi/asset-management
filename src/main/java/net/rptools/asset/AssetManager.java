@@ -17,8 +17,6 @@ package net.rptools.asset;
 import java.io.IOException;
 import java.util.Properties;
 
-import net.rptools.asset.intern.AssetImpl;
-
 /**
  * This class exists in the client and in the server and is responsible for
  * providing opaque objects (assets) from different sources. It evaluates
@@ -48,7 +46,7 @@ public interface AssetManager {
      * @return the java object representing the asset.
      * @throws NullPointerException if id is null
      */
-    public AssetImpl getAsset(String id, boolean cache);
+    public Asset getAsset(String id, boolean cache);
 
     /**
      * Get an asset asynchronously. The notification will not be on the EDT
@@ -74,7 +72,7 @@ public interface AssetManager {
      * @param cache cache the asset?
      * @throws IOException in case no writable supplier was found
      */
-    public void createAsset(final AssetImpl obj, final AssetListener listener, final boolean cache) throws IOException;
+    public void createAsset(final Asset obj, final AssetListener listener, final boolean cache) throws IOException;
 
     /**
      * Remove an asset from being managed by all the suppliers. False is

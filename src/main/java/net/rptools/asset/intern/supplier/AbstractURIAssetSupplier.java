@@ -71,9 +71,9 @@ public abstract class AbstractURIAssetSupplier extends AbstractAssetSupplier {
     abstract protected AssetImpl loadImage(String id, URI uri, AssetListener listener);
 
     /**
-     * Direct reference getter, to be overloaded by subclasses
+     * Direct reference getter, to be overloaded by subclasses.
      * @param id id of the asset
-     * @return asset name associate to id
+     * @return asset name associate to id. An absolute URI.
      */
     abstract protected String getKnownAsset(String id);
 }

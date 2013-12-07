@@ -29,6 +29,7 @@ import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.rptools.asset.Asset;
 import net.rptools.asset.AssetListener;
 import net.rptools.asset.intern.AssetImpl;
 
@@ -58,11 +59,11 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
         super(override);
         this.priority = Integer.parseInt(properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".priority"));
         String cacheLocalPath = properties.getProperty(DiskCacheAssetSupplier.class.getSimpleName() + ".directory");
-        createPath(cacheLocalPath);
+        createPath(System.getProperty("user.dir") + System.getProperty("file.separator") + cacheLocalPath);
     }
 
     @Override
-    public synchronized void update(String id, AssetImpl obj) {
+    public synchronized void update(String id, Asset obj) {
         File testFile = getAssetFile(id);
         if (testFile == null) {
             LOGGER.info("Cannot cache asset " + id);
@@ -84,7 +85,7 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     }
 
     @Override
-    public String create(AssetImpl obj) {
+    public String create(Asset obj) {
         String id = UUID.randomUUID().toString();
         update(id, obj);
         return id;
@@ -129,9 +130,9 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
      */
     private File getAssetFile(String id) {
         try {
-            String name = getKnownAsset(id);
-            LOGGER.info("reading " + id + " as " + name);
-            return new File(new URI(name));
+            String absName = getKnownAsset(id);
+            LOGGER.info("reading " + id + " as " + absName);
+            return new File(new URI(absName));
         }
         catch (Exception e) {
             LOGGER.error("Get failed for " + id, e);
@@ -158,14 +159,13 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     /**
      * Helper to set up cache directory path. Does not include the identifying prefix.
      * @param home prefix that is ensured to exist.
-     * @param cachePath path to find and potentially create
+     * @param absPath (absolute) path to find and potentially create
      * @return directory
      * @throws SecurityException if the path cannot be created
      */
-    private void createPath(String cacheLocalPath) throws IOException {
+    private void createPath(String absPath) throws IOException {
         final String SEP = System.getProperty("file.separator");
-        String home = System.getProperty("user.dir");
-        fileAssetPath = home + SEP + cacheLocalPath.replaceAll("/", SEP);
+        fileAssetPath = absPath.replaceAll("/", SEP);
         if (!fileAssetPath.endsWith(SEP))
             fileAssetPath += SEP;
 

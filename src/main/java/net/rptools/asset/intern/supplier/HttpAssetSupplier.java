@@ -31,7 +31,7 @@ import net.rptools.asset.intern.AssetImpl;
  * We only provide BufferedImages currently.
  * @author username
  */
-public class HttpAssetSupplier extends  AbstractURIAssetSupplier {
+public class HttpAssetSupplier extends AbstractURIAssetSupplier {
     /** Notify partial interval */
     private long notifyInterval = 500; // millis
 
