@@ -23,7 +23,7 @@ import net.rptools.asset.AssetListener;
 
 /**
  * Memory asset cache. It is discouraged to use the create method of caches.
- * @author miju
+ * @author username
  */
 public class MemCacheAssetSupplier extends AbstractAssetSupplier {
     /** simple map */

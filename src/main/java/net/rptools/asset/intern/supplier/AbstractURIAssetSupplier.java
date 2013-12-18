@@ -47,9 +47,9 @@ public abstract class AbstractURIAssetSupplier extends AbstractAssetSupplier {
         AssetImpl result = null;
         try {
             URI uri = new URI(getKnownAsset(id));
-            LOGGER.info("Start loading " + id);
+            LOGGER.info("Start loading {}", id);
             result = loadImage(id, uri, listener);
-            LOGGER.info("Finished loading " + id);
+            LOGGER.info("Finished loading {}", id);
         }
         catch (URISyntaxException e) {
             LOGGER.error(id + " is not an URL", e);

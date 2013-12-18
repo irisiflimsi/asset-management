@@ -259,7 +259,7 @@ public class ZipFileAssetSupplier extends AbstractURIAssetSupplier {
         OutputStream stream = null;
         try {
             setKnownAsset(id, name);
-            LOGGER.info("writing " + id + " as " + name);
+            LOGGER.info("writing {} as {}", id, name);
             Path entry = zipFile.getPath("index");
             Files.delete(entry);
             stream = Files.newOutputStream(entry);

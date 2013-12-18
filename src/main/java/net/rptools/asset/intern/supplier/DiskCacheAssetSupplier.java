@@ -66,7 +66,7 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     public synchronized void update(String id, Asset obj) {
         File testFile = getAssetFile(id);
         if (testFile == null) {
-            LOGGER.info("Cannot cache asset " + id);
+            LOGGER.info("Cannot cache asset {}", id);
             return;
         }
         // This method also serves as update, so do something even if asset
@@ -131,7 +131,7 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
     private File getAssetFile(String id) {
         try {
             String absName = getKnownAsset(id);
-            LOGGER.info("reading " + id + " as " + absName);
+            LOGGER.info("reading {} as {}", id, absName);
             return new File(new URI(absName));
         }
         catch (Exception e) {
@@ -201,9 +201,9 @@ public class DiskCacheAssetSupplier extends AbstractURIAssetSupplier {
                 if (totalSize <= toSize)
                     break;
                 totalSize -= elem.length();
-                LOGGER.info("Removing from cache " + elem.getName());
+                LOGGER.info("Removing from cache {}", elem.getName());
                 if (!elem.delete())
-                    LOGGER.error("Cannot delete: " + elem.getAbsolutePath());
+                    LOGGER.error("Cannot delete: {}", elem.getAbsolutePath());
             }
         }
         catch (IOException e) {

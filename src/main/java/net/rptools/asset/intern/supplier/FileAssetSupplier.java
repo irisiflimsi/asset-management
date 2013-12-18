@@ -160,7 +160,7 @@ public class FileAssetSupplier extends AbstractURIAssetSupplier {
         OutputStream stream = null;
         try {
             setKnownAsset(id, localName);
-            LOGGER.info("writing " + id + " as " + localName);
+            LOGGER.info("writing {} as {}", id, localName);
             stream = new FileOutputStream(fileAssetPath + "index");
             knownAssets.store(stream, "Encoded as java properties");
             if (localName == null)

@@ -99,7 +99,7 @@ public class InputStreamInterceptor extends InputStream {
         public void run() {
             while (!done) {
                 try {
-                    LOGGER.info("notifyInterval: " + notifyInterval);
+                    LOGGER.info("notifyInterval: {}", notifyInterval);
                     sleep(notifyInterval);
                     double ratio = 0;
                     // remainder counts down from assetLength, which might be 0.
@@ -110,7 +110,7 @@ public class InputStreamInterceptor extends InputStream {
                     else {
                         ratio = remainder/(double)(remainder - 1); // white (?) lie
                     }
-                    LOGGER.info("Notifying " + remainder + "&" + assetLength + "; ratio=" + ratio);
+                    LOGGER.info("Notifying {} & {}; ratio={}", remainder, assetLength, ratio);
                     listener.notifyPartial(id, ratio);
                 }
                 catch (Exception e) {
